@@ -1,0 +1,234 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Invoice Statement #{{ invoice.pk }}{% endblock %}
+
+{% block content %}
+<!-- Control Actions -->
+<div class="row mb-4 d-print-none">
+  <div class="col-12 text-end">
+    <button class="btn btn-outline-primary btn-sm me-2" onclick="window.print();">
+      <i class="bi bi-printer me-1"></i> Print Statement
+    </button>
+    <a href="{% url 'finance:invoice_list' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i> Back to Invoices
+    </a>
+  </div>
+</div>
+
+<div class="row">
+  <!-- Invoice Statement -->
+  <div class="col-md-8 mb-4">
+    <div class="card shadow-sm border-0 p-4" id="statementPrintArea">
+      <!-- Header -->
+      <div class="d-flex justify-content-between align-items-start mb-4">
+        <div>
+          <h3 class="fw-bold mb-0 text-primary">SCHOOLMS ACADEMY</h3>
+          <p class="text-muted small uppercase tracking-wider mb-0">Fee Invoice Statement</p>
+        </div>
+        <div class="text-end">
+          <span class="badge 
+            {% if invoice.status == 'paid' %}bg-success
+            {% elif invoice.status == 'partial' %}bg-warning text-dark
+            {% else %}bg-danger{% endif %} fs-6 p-2">
+            Status: {{ invoice.get_status_display }}
+          </span>
+          <p class="text-muted small mt-2 mb-0">Date: {{ invoice.created_at|date:"M d, Y" }}</p>
+        </div>
+      </div>
+      
+      <hr>
+
+      <!-- Student details -->
+      <div class="row g-3 my-2">
+        <div class="col-sm-6">
+          <h6 class="text-muted fw-semibold small mb-1">Billed To:</h6>
+          <p class="fw-bold text-dark mb-0">{{ invoice.student.user.get_full_name }}</p>
+          <p class="text-secondary small mb-0">Admission No: {{ invoice.student.admission_no }}</p>
+          <p class="text-secondary small mb-0">Class: {{ invoice.student_class.name }}</p>
+        </div>
+        <div class="col-sm-6 text-sm-end">
+          <h6 class="text-muted fw-semibold small mb-1">Billing Period:</h6>
+          <p class="fw-semibold text-dark mb-0">{{ invoice.session.name }}</p>
+          <p class="text-secondary small mb-0">Term: {{ invoice.term.name }}</p>
+        </div>
+      </div>
+
+      <!-- Line items table -->
+      <h6 class="fw-bold text-dark mt-4 mb-2">Invoice Details</h6>
+      <div class="table-responsive">
+        <table class="table table-bordered align-middle mb-0" id="itemsTable">
+          <thead class="table-light">
+            <tr>
+              <th>Description</th>
+              <th class="text-end" style="width: 150px;">Amount</th>
+              {% if user.is_admin %}
+                <th class="text-center d-print-none" style="width: 80px;">Action</th>
+              {% endif %}
+            </tr>
+          </thead>
+          <tbody>
+            {% if invoice.balance_from_previous_term > 0 %}
+            <tr>
+              <td class="text-muted italic">Balance brought forward from previous term</td>
+              <td class="text-end fw-semibold">${{ invoice.balance_from_previous_term }}</td>
+              {% if user.is_admin %}<td></td>{% endif %}
+            </tr>
+            {% endif %}
+            {% for item in items %}
+            <tr id="item-row-{{ item.pk }}">
+              <td class="fw-semibold text-dark">{{ item.description }}</td>
+              <td class="text-end fw-semibold text-secondary">${{ item.amount }}</td>
+              {% if user.is_admin %}
+                <td class="text-center d-print-none">
+                  <button class="btn btn-sm btn-outline-danger btn-delete-item" data-id="{{ item.pk }}" data-url="{% url 'finance:invoice_item_delete' item.pk %}">
+                    <i class="bi bi-trash-fill"></i>
+                  </button>
+                </td>
+              {% endif %}
+            </tr>
+            {% empty %}
+            {% if invoice.balance_from_previous_term == 0 %}
+            <tr><td colspan="3" class="text-center text-muted py-3">No billed items yet.</td></tr>
+            {% endif %}
+            {% endfor %}
+            {% if invoice.discount > 0 %}
+            <tr class="table-danger-subtle text-danger">
+              <td class="fw-bold">Applied Discount / Scholarship:</td>
+              <td class="text-end fw-bold">-${{ invoice.discount }}</td>
+              {% if user.is_admin %}<td class="d-print-none"></td>{% endif %}
+            </tr>
+            {% endif %}
+            <tr class="table-light">
+              <td class="fw-bold text-dark">Total Amount Payable:</td>
+              <td class="text-end fw-bold text-dark fs-5">${{ invoice.total_payable }}</td>
+              {% if user.is_admin %}<td class="d-print-none"></td>{% endif %}
+            </tr>
+            <tr class="table-success-subtle">
+              <td class="fw-bold text-success">Total Amount Paid:</td>
+              <td class="text-end fw-bold text-success fs-5">${{ invoice.total_paid }}</td>
+              {% if user.is_admin %}<td class="d-print-none"></td>{% endif %}
+            </tr>
+            <tr class="table-warning-subtle">
+              <td class="fw-bold text-danger">Outstanding Balance:</td>
+              <td class="text-end fw-bold text-danger fs-4">${{ invoice.balance }}</td>
+              {% if user.is_admin %}<td class="d-print-none"></td>{% endif %}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Payment History -->
+      <h6 class="fw-bold text-dark mt-4 mb-2">Payment / Receipts History</h6>
+      <div class="table-responsive">
+        <table class="table table-sm table-striped align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Receipt No</th>
+              <th>Date Paid</th>
+              <th>Method</th>
+              <th>Note</th>
+              <th class="text-end">Amount Paid</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in payments %}
+            <tr>
+              <td><span class="badge bg-secondary-subtle text-dark border">{{ p.receipt_no }}</span></td>
+              <td>{{ p.date_paid|date:"M d, Y" }}</td>
+              <td class="text-capitalize">{{ p.get_payment_method_display }}</td>
+              <td class="text-muted small">{{ p.note|default:"—" }}</td>
+              <td class="text-end fw-bold text-success">${{ p.amount_paid }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="text-center text-muted py-3">No payments recorded for this invoice yet.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Admin control panel (forms) -->
+  {% if user.is_admin %}
+  <div class="col-md-4 d-print-none">
+    <!-- Add item -->
+    <div class="card shadow-sm border-0 mb-4">
+      <div class="card-header bg-white border-0 pt-4 pb-0">
+        <h6 class="fw-bold mb-0 text-dark">Add Line Item</h6>
+      </div>
+      <div class="card-body pt-2">
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="add_item" value="1">
+          {% crispy item_form %}
+        </form>
+      </div>
+    </div>
+
+    <!-- Record payment -->
+    {% if invoice.balance > 0 %}
+    <div class="card shadow-sm border-0 mb-4">
+      <div class="card-header bg-white border-0 pt-4 pb-0">
+        <h6 class="fw-bold mb-0 text-dark">Record Receipt Payment</h6>
+      </div>
+      <div class="card-body pt-2">
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="record_payment" value="1">
+          {% crispy payment_form %}
+        </form>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+
+<style>
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #statementPrintArea, #statementPrintArea * {
+    visibility: visible;
+  }
+  #statementPrintArea {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+  // AJAX item deletion
+  $(document).on('click', '.btn-delete-item', function () {
+    const url = $(this).data('url');
+    const id = $(this).data('id');
+    const row = $(`#item-row-${id}`);
+    if (!confirm('Remove this line item from the invoice?')) return;
+    
+    $.post(url)
+      .done(() => {
+        row.fadeOut(300, () => {
+          row.remove();
+          // Reload page to recalculate totals
+          window.location.reload();
+        });
+      })
+      .fail(() => {
+        alert('Failed to delete line item.');
+      });
+  });
+});
+</script>
+{% endblock %}

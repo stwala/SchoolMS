@@ -1,0 +1,336 @@
+/* modern.css - Premium SchoolMS styling system */
+
+:root {
+  --primary-hsl: 235, 65%, 60%;
+  --success-hsl: 150, 60%, 45%;
+  --warning-hsl: 35, 85%, 55%;
+  --danger-hsl: 355, 75%, 55%;
+  --info-hsl: 185, 70%, 45%;
+  
+  --dark-hsl: 220, 30%, 12%;
+  --bg-hsl: 220, 20%, 97%;
+  --card-bg-hsl: 0, 0%, 100%;
+  --text-muted-hsl: 220, 10%, 50%;
+  
+  --border-radius-sm: 8px;
+  --border-radius-md: 14px;
+  --border-radius-lg: 20px;
+  
+  --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.06), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  
+  --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Global improvements */
+body {
+  font-family: 'Outfit', sans-serif;
+  background-color: hsl(var(--bg-hsl));
+  color: hsl(var(--dark-hsl));
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.12);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0,0,0,0.24);
+}
+
+/* Dashboard Metric Cards */
+.metric-card {
+  border: none !important;
+  border-radius: var(--border-radius-md) !important;
+  box-shadow: var(--shadow-sm) !important;
+  transition: var(--transition-smooth);
+  position: relative;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.metric-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md) !important;
+}
+
+/* Premium gradient indicators */
+.metric-card-primary::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: linear-gradient(to bottom, hsl(var(--primary-hsl)), hsl(250, 70%, 65%)); }
+.metric-card-success::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: linear-gradient(to bottom, hsl(var(--success-hsl)), hsl(160, 70%, 55%)); }
+.metric-card-warning::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: linear-gradient(to bottom, hsl(var(--warning-hsl)), hsl(45, 90%, 60%)); }
+.metric-card-danger::before {  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: linear-gradient(to bottom, hsl(var(--danger-hsl)), hsl(10, 80%, 60%)); }
+.metric-card-info::before {    content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: linear-gradient(to bottom, hsl(var(--info-hsl)), hsl(195, 80%, 55%)); }
+
+/* Glowing icon wrappers */
+.icon-shape {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  font-size: 1.25rem;
+  transition: var(--transition-smooth);
+}
+
+.bg-primary-glow { background: rgba(90, 103, 216, 0.08); color: hsl(var(--primary-hsl)); }
+.bg-success-glow { background: rgba(72, 187, 120, 0.08); color: hsl(var(--success-hsl)); }
+.bg-warning-glow { background: rgba(237, 137, 54, 0.08); color: hsl(var(--warning-hsl)); }
+.bg-danger-glow { background: rgba(229, 62, 62, 0.08); color: hsl(var(--danger-hsl)); }
+.bg-info-glow { background: rgba(49, 151, 149, 0.08); color: hsl(var(--info-hsl)); }
+
+/* Card components */
+.card {
+  border: 1px solid rgba(0, 0, 0, 0.035) !important;
+  border-radius: var(--border-radius-md) !important;
+  box-shadow: var(--shadow-sm);
+  background: #ffffff;
+  transition: var(--transition-smooth);
+}
+
+.card-header {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.035);
+  font-weight: 700;
+  color: hsl(var(--dark-hsl));
+}
+
+/* Sidebar Customizations */
+#sidebar {
+  background-color: #ffffff;
+  border-right: 1px solid rgba(0, 0, 0, 0.045) !important;
+  padding-top: 1.25rem;
+}
+
+.nav-pills .nav-link {
+  color: #4a5568 !important;
+  font-weight: 550;
+  border-radius: 10px;
+  padding: 0.7rem 1.1rem;
+  margin-bottom: 2px;
+  transition: var(--transition-smooth);
+}
+
+.nav-pills .nav-link:hover:not(.active) {
+  background-color: rgba(90, 103, 216, 0.05);
+  color: hsl(var(--primary-hsl)) !important;
+  transform: translateX(2px);
+}
+
+.nav-pills .nav-link.active {
+  background: linear-gradient(135deg, hsl(var(--primary-hsl)) 0%, hsl(245, 60%, 55%) 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(90, 103, 216, 0.25);
+}
+
+/* Table Customizations */
+.table-responsive {
+  border-radius: var(--border-radius-md);
+  overflow: hidden;
+}
+
+.table {
+  margin-bottom: 0;
+}
+
+.table th {
+  background-color: #f7fafc;
+  color: #718096;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  padding: 0.9rem 1.2rem;
+  font-weight: 700;
+}
+
+.table td {
+  padding: 0.9rem 1.2rem;
+  font-size: 0.9rem;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.table-hover tbody tr:hover {
+  background-color: rgba(90, 103, 216, 0.015);
+}
+
+/* Buttons */
+.btn {
+  border-radius: 10px;
+  font-weight: 600;
+  padding: 0.55rem 1.25rem;
+  font-size: 0.9rem;
+  transition: var(--transition-smooth);
+}
+
+.btn-sm {
+  padding: 0.35rem 0.9rem;
+  font-size: 0.8rem;
+  border-radius: 8px;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, hsl(var(--primary-hsl)) 0%, hsl(245, 60%, 55%) 100%);
+  border: none;
+  box-shadow: 0 4px 10px rgba(90, 103, 216, 0.15);
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(90, 103, 216, 0.25);
+  background: linear-gradient(135deg, hsl(235, 65%, 54%) 0%, hsl(245, 60%, 48%) 100%);
+}
+
+.btn-success {
+  background: linear-gradient(135deg, hsl(var(--success-hsl)) 0%, hsl(155, 60%, 40%) 100%);
+  border: none;
+  box-shadow: 0 4px 10px rgba(72, 187, 120, 0.15);
+}
+
+.btn-success:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(72, 187, 120, 0.25);
+  background: linear-gradient(135deg, hsl(150, 60%, 39%) 0%, hsl(155, 60%, 34%) 100%);
+}
+
+.btn-danger {
+  background: linear-gradient(135deg, hsl(var(--danger-hsl)) 0%, hsl(350, 70%, 50%) 100%);
+  border: none;
+  box-shadow: 0 4px 10px rgba(229, 62, 62, 0.15);
+}
+
+.btn-danger:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(229, 62, 62, 0.25);
+}
+
+/* Badge Styling */
+.badge {
+  padding: 0.45em 0.85em;
+  font-weight: 600;
+  font-size: 0.75rem;
+  border-radius: 8px;
+}
+
+.bg-success-subtle {
+  background-color: rgba(72, 187, 120, 0.12) !important;
+  color: #276749 !important;
+}
+
+.bg-warning-subtle {
+  background-color: rgba(237, 137, 54, 0.12) !important;
+  color: #9c4221 !important;
+}
+
+.bg-danger-subtle {
+  background-color: rgba(229, 62, 62, 0.12) !important;
+  color: #9b2c2c !important;
+}
+
+.bg-info-subtle {
+  background-color: rgba(49, 151, 149, 0.12) !important;
+  color: #234e52 !important;
+}
+
+/* Forms styling */
+.form-control, .form-select {
+  border-radius: 10px;
+  border: 1px solid #cbd5e0;
+  padding: 0.6rem 0.9rem;
+  font-size: 0.92rem;
+  transition: var(--transition-smooth);
+  background-color: #fcfdfd;
+}
+
+.form-control:focus, .form-select:focus {
+  background-color: #ffffff;
+  border-color: hsl(var(--primary-hsl));
+  box-shadow: 0 0 0 3px rgba(90, 103, 216, 0.15);
+}
+
+/* Alert Styling */
+.alert {
+  border-radius: var(--border-radius-sm);
+  border: none;
+  box-shadow: var(--shadow-sm);
+}
+
+
+/* ==========================================================================
+   CRITICAL OVERRIDE: Prevent table layouts from blocking the modal interaction
+   ========================================================================== */
+
+/* 1. Break the overflow trap so the modal can receive click events */
+.table-responsive, 
+main, 
+.content-wrapper {
+  overflow: visible !important;
+}
+
+/* 2. Re-apply scroll safety ONLY to standard database layout cards, never the modal */
+.card .table-responsive {
+  overflow-x: auto !important;
+}
+
+/* 3. Elevate the Bootstrap Modal layers far above the sidebar dashboard layout */
+.modal-backdrop {
+  z-index: 1040 !important;
+}
+
+.modal {
+  z-index: 1055 !important;
+  pointer-events: auto !important;
+}
+
+.modal-dialog {
+  z-index: 1056 !important;
+  position: relative;
+}
+
+/* 4. Ensure elements inside the modal are explicitly clickable */
+.modal-content input,
+.modal-content select,
+.modal-content button {
+  pointer-events: auto !important;
+  position: relative;
+  z-index: 1057 !important;
+}
+
+/* Independent scrolling for sidebar and main content */
+/* ==========================================================================
+   Independent Scrolling System Fix
+   ========================================================================== */
+
+body {
+  height: 100vh !important;
+  max-height: 100vh !important;
+  overflow: hidden !important; /* Forces the main body to freeze */
+}
+
+/* Selects the immediate .row wrapper below the navbar container */
+.container-fluid > .row {
+  height: calc(100vh - 60px); /* Adjust 60px to your explicit navbar height if needed */
+  overflow: hidden !important;
+  display: flex;
+  flex-wrap: nowrap;
+}
+
+#sidebar {
+  height: 100% !important;
+  overflow-y: auto !important; /* Scrollable sidebar */
+  overflow-x: hidden;
+}
+
+main {
+  height: 100% !important;
+  flex: 1;
+  overflow-y: auto !important; /* Scrollable student list table content */
+  overflow-x: hidden;
+}

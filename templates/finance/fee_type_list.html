@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Fee Types{% endblock %}
+
+{% block content %}
+<div class="row">
+  <!-- Create form -->
+  <div class="col-md-4 mb-4">
+    <div class="card shadow-sm border-0">
+      <div class="card-header bg-white border-0 pt-4 pb-0">
+        <h5 class="fw-bold mb-0">Add Fee Type</h5>
+      </div>
+      <div class="card-body">
+        <form method="post" action="{% url 'finance:fee_type_create' %}">
+          {% csrf_token %}
+          {% crispy form %}
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Fee Types List -->
+  <div class="col-md-8 mb-4">
+    <div class="card shadow-sm border-0">
+      <div class="card-header bg-white border-0 pt-4 pb-2">
+        <h5 class="fw-bold mb-0">Fee Types Directory</h5>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0" id="feetypesTable">
+          <thead class="table-light">
+            <tr>
+              <th>Fee Name</th>
+              <th>Standard Amount</th>
+              <th>Description</th>
+              <th class="text-end px-4">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for f in fee_types %}
+            <tr id="feetype-row-{{ f.pk }}">
+              <td class="fw-semibold text-dark">{{ f.name }}</td>
+              <td class="fw-bold text-success">${{ f.amount }}</td>
+              <td class="text-secondary small">{{ f.description|default:"—" }}</td>
+              <td class="text-end px-4">
+                <a href="{% url 'finance:fee_type_update' f.pk %}" class="btn btn-sm btn-outline-secondary me-1">Edit</a>
+                <button class="btn btn-sm btn-outline-danger btn-delete-feetype" data-id="{{ f.pk }}" data-url="{% url 'finance:fee_type_delete' f.pk %}">Delete</button>
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" class="text-center text-muted py-4">No fee types registered yet.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).on('click', '.btn-delete-feetype', function () {
+  const url = $(this).data('url');
+  const id = $(this).data('id');
+  const row = $(`#feetype-row-${id}`);
+  if (!confirm('Are you sure you want to delete this fee type?')) return;
+  
+  $.post(url)
+    .done(() => {
+      row.fadeOut(300, () => row.remove());
+    })
+    .fail(() => {
+      alert('Delete failed.');
+    });
+});
+</script>
+{% endblock %}

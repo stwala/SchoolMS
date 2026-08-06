@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% block title %}Teachers{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="mb-0">Teachers</h5>
+  <a href="{% url 'people:teacher_create' %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-lg"></i> Add teacher
+  </a>
+</div>
+
+<input type="text" id="searchInput" class="form-control mb-3" placeholder="Search name or staff ID…">
+
+<div class="card">
+  <table class="table table-hover mb-0" id="teacherTable">
+    <thead class="table-light">
+      <tr><th>Staff ID</th><th>Name</th><th>Email</th><th>Qualification</th><th>Specialization</th><th>Actions</th></tr>
+    </thead>
+    <tbody>
+    {% for t in teachers %}
+    <tr>
+      <td>{{ t.staff_id }}</td>
+      <td>{{ t.user.get_full_name }}</td>
+      <td>{{ t.user.email }}</td>
+      <td>{{ t.qualification|default:"—" }}</td>
+      <td>{{ t.specialization|default:"—" }}</td>
+      <td>
+        <a href="{% url 'people:teacher_update' t.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
+        <button class="btn btn-sm btn-outline-danger btn-delete" data-url="{% url 'people:teacher_delete' t.pk %}">Delete</button>
+      </td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="6" class="text-center text-muted py-4">No teachers yet.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function () {
+  $('.select2-classes').select2({
+    theme: 'bootstrap-5',
+    placeholder: 'Select class(es)…',
+    allowClear: true,
+    width: '100%',
+  });
+});
+
+$('#searchInput').on('input', function () {
+  const q = $(this).val().toLowerCase();
+  $('#teacherTable tbody tr').each(function () {
+    $(this).toggle($(this).text().toLowerCase().includes(q));
+  });
+});
+$(document).on('click', '.btn-delete', function () {
+  const url = $(this).data('url');
+  const row = $(this).closest('tr');
+  if (!confirm('Delete this teacher?')) return;
+  $.post(url).done(() => row.fadeOut(300, () => row.remove())).fail(() => alert('Failed.'));
+});
+</script>
+{% endblock %}

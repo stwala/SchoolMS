@@ -1,0 +1,178 @@
+{% extends 'base.html' %}
+{% block title %}Daily Attendance Sheet{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm border-0 mb-4 d-print-none">
+  <div class="card-header bg-white border-0 pt-4 pb-2">
+    <h5 class="fw-bold text-dark mb-0">Select Class & Date</h5>
+  </div>
+  <div class="card-body">
+    <form method="get" id="attendanceFilterForm" class="row g-3">
+      <div class="col-md-5">
+        <label for="student_class" class="form-label small fw-semibold">Class</label>
+        <select name="student_class" id="student_class" class="form-select" onchange="document.getElementById('attendanceFilterForm').submit();">
+          <option value="">-- Select Class --</option>
+          {% for c in classes %}
+            <option value="{{ c.pk }}" {% if selected_class and selected_class.pk == c.pk %}selected{% endif %}>{{ c.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-5">
+        <label for="date" class="form-label small fw-semibold">Date</label>
+        <input type="date" name="date" id="date" class="form-control" value="{{ selected_date }}" onchange="document.getElementById('attendanceFilterForm').submit();">
+      </div>
+
+      {% if not selected_class %}
+      <div class="col-12 mt-2">
+        <span class="text-info small"><i class="bi bi-info-circle-fill"></i> Please select a class to load the student attendance checklist.</span>
+      </div>
+      {% endif %}
+    </form>
+  </div>
+</div>
+
+{% if selected_class %}
+<div class="card shadow-sm border-0">
+  <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center pt-4 pb-2">
+    <div>
+      <h5 class="fw-bold mb-0">Attendance Checklist: {{ selected_class.name }}</h5>
+      <small class="text-muted">Date: {{ selected_date }}</small>
+    </div>
+    <div>
+      <span class="badge bg-success-subtle text-success border small p-2"><i class="bi bi-lightning-charge-fill"></i> Auto-save enabled</span>
+    </div>
+  </div>
+  
+  <form method="post">
+    {% csrf_token %}
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0" id="attendanceTable">
+        <thead class="table-light">
+          <tr>
+            <th>Admission No</th>
+            <th>Student Name</th>
+            <th class="text-center" style="width: 450px;">Status</th>
+            <th>Remarks</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in students %}
+          <tr id="student-row-{{ s.pk }}" data-student-id="{{ s.pk }}">
+            <td><code>{{ s.admission_no }}</code></td>
+            <td class="fw-semibold">{{ s.user.get_full_name }}</td>
+            <td class="text-center">
+              <div class="btn-group btn-group-sm w-100" role="group">
+                <input type="radio" class="btn-check status-radio" name="status_{{ s.pk }}" id="present_{{ s.pk }}" value="present" 
+                       {% if not s.attendance_obj or s.attendance_obj.status == 'present' %}checked{% endif %}>
+                <label class="btn btn-outline-success" for="present_{{ s.pk }}">Present</label>
+
+                <input type="radio" class="btn-check status-radio" name="status_{{ s.pk }}" id="late_{{ s.pk }}" value="late"
+                       {% if s.attendance_obj and s.attendance_obj.status == 'late' %}checked{% endif %}>
+                <label class="btn btn-outline-warning" for="late_{{ s.pk }}">Late</label>
+
+                <input type="radio" class="btn-check status-radio" name="status_{{ s.pk }}" id="excused_{{ s.pk }}" value="excused"
+                       {% if s.attendance_obj and s.attendance_obj.status == 'excused' %}checked{% endif %}>
+                <label class="btn btn-outline-info" for="excused_{{ s.pk }}">Excused</label>
+
+                <input type="radio" class="btn-check status-radio" name="status_{{ s.pk }}" id="absent_{{ s.pk }}" value="absent"
+                       {% if s.attendance_obj and s.attendance_obj.status == 'absent' %}checked{% endif %}>
+                <label class="btn btn-outline-danger" for="absent_{{ s.pk }}">Absent</label>
+              </div>
+            </td>
+            <td>
+              <input type="text" name="remarks_{{ s.pk }}" class="form-control form-control-sm remarks-input" 
+                     value="{{ s.attendance_obj.remarks|default:'' }}" placeholder="Optional note…">
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4" class="text-center text-muted py-4">No active students enrolled in this class.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if students %}
+    <div class="card-footer bg-white border-0 py-3 text-end d-print-none">
+      <button type="submit" class="btn btn-primary px-4"><i class="bi bi-check-all"></i> Save All Records</button>
+    </div>
+    {% endif %}
+
+    {% if page_obj and page_obj.has_other_pages %}
+<div class="d-flex justify-content-between align-items-center mt-3 px-1">
+  <p class="text-muted small mb-0">
+    Page <strong>{{ page_obj.number }}</strong> of <strong>{{ page_obj.paginator.num_pages }}</strong>
+    &nbsp;·&nbsp; {{ page_obj.paginator.count }} students total
+  </p>
+  <div class="d-flex gap-2">
+    {% if page_obj.has_previous %}
+      <a href="?student_class={{ selected_class_id }}&date={{ selected_date }}&page={{ page_obj.previous_page_number }}"
+         class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-chevron-left me-1"></i> Prev
+      </a>
+    {% else %}
+      <button class="btn btn-outline-secondary btn-sm" disabled>
+        <i class="bi bi-chevron-left me-1"></i> Prev
+      </button>
+    {% endif %}
+
+    {% if page_obj.has_next %}
+      <a href="?student_class={{ selected_class_id }}&date={{ selected_date }}&page={{ page_obj.next_page_number }}"
+         class="btn btn-outline-primary btn-sm">
+        Next <i class="bi bi-chevron-right ms-1"></i>
+      </a>
+    {% else %}
+      <button class="btn btn-outline-primary btn-sm" disabled>
+        Next <i class="bi bi-chevron-right ms-1"></i>
+      </button>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+  </form>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+  const dateVal = $('#date').val();
+  
+  // AJAX dynamically save attendance on radio check or remarks changes
+  $('.status-radio').on('change', function() {
+    triggerAjaxSave($(this).closest('tr'));
+  });
+
+  $('.remarks-input').on('blur', function() {
+    triggerAjaxSave($(this).closest('tr'));
+  });
+
+  function triggerAjaxSave(row) {
+    const studentId = row.data('student-id');
+    const status = row.find('.status-radio:checked').val();
+    const remarks = row.find('.remarks-input').val();
+
+    $.ajax({
+      url: "{% url 'attendance:ajax_mark_attendance' %}",
+      method: "POST",
+      data: {
+        student_id: studentId,
+        date: dateVal,
+        status: status,
+        remarks: remarks,
+      },
+      success: function() {
+        // Flash row green briefly to signal successful auto-save
+        row.addClass('table-success');
+        setTimeout(() => row.removeClass('table-success'), 400);
+      },
+      error: function() {
+        alert('Auto-save failed. Please click Save All Records instead.');
+      }
+    });
+  }
+});
+</script>
+{% endblock %}

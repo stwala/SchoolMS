@@ -1,0 +1,207 @@
+{% extends 'base.html' %}
+{% block title %}Grade Entry Sheet{% endblock %}
+
+{% block content %}
+{% if not user.is_admin %}
+<div class="alert border-0 mb-3 d-flex align-items-center gap-2"
+     style="background: rgba(90,103,216,0.07); border-left: 4px solid hsl(235,65%,60%) !important; border-radius: 8px;">
+  <i class="bi bi-filter-circle text-primary fs-5"></i>
+  <div>
+    <span class="fw-semibold text-primary">Restricted View</span>
+    <span class="text-secondary small ms-1">— You can only enter grades for classes assigned to you.</span>
+  </div>
+</div>
+{% endif %}
+
+<div class="card shadow-sm border-0 mb-4">
+  <div class="card-header bg-white border-0 pt-4 pb-2">
+    <h5 class="fw-bold text-dark mb-0">Grade Entry Filters</h5>
+  </div>
+  <div class="card-body">
+    <form method="get" id="filterForm" class="row g-3">
+      <div class="col-md-3">
+        <label for="student_class" class="form-label small fw-semibold">Class</label>
+        <select name="student_class" id="student_class" class="form-select" onchange="document.getElementById('filterForm').submit();">
+  <option value="">-- Select Class --</option>
+  {% for c in classes %}
+    <option value="{{ c.pk }}" {% if selected_class_id and selected_class_id == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>
+  {% endfor %}
+</select>
+      </div>
+
+      
+      <div class="col-md-3">
+        <label for="session" class="form-label small fw-semibold">Academic Session</label>
+       <select name="session" id="session" class="form-select" {% if not selected_class %}disabled{% endif %}>
+  <option value="">-- Select Session --</option>
+  {% for s in sessions %}
+    <option value="{{ s.pk }}" {% if selected_session_id and selected_session_id == s.pk|stringformat:"s" %}selected{% endif %}>{{ s.name }} {% if s.current %}(Active){% endif %}</option>
+  {% endfor %}
+</select>
+      </div>
+
+      <div class="col-md-3">
+        <label for="term" class="form-label small fw-semibold">Academic Term</label>
+       <select name="term" id="term" class="form-select" {% if not selected_class %}disabled{% endif %}>
+  <option value="">-- Select Term --</option>
+  {% for t in terms %}
+    <option value="{{ t.pk }}" {% if selected_term_id and selected_term_id == t.pk|stringformat:"s" %}selected{% endif %}>{{ t.name }} {% if t.current %}(Active){% endif %}</option>
+  {% endfor %}
+</select>
+      </div>
+
+      <div class="col-md-3">
+        <label for="subject" class="form-label small fw-semibold">Subject</label>
+        <select name="subject" id="subject" class="form-select" {% if not selected_class %}disabled{% endif %} onchange="document.getElementById('filterForm').submit();">
+  <option value="">-- Select Subject --</option>
+  {% for s in subjects %}
+    <option value="{{ s.pk }}" {% if selected_subject_id and selected_subject_id == s.pk|stringformat:"s" %}selected{% endif %}>{{ s.name }}</option>
+  {% endfor %}
+</select>
+      </div>
+
+
+      {% if selected_class and not selected_subject %}
+      <div class="col-12 mt-2">
+        <span class="text-info small"><i class="bi bi-info-circle-fill"></i> Please select a Subject, Session, and Term to view students.</span>
+      </div>
+      {% endif %}
+    </form>
+  </div>
+</div>
+
+{% if selected_class and selected_subject and selected_session and selected_term %}
+<div class="card shadow-sm border-0">
+  <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center pt-4 pb-2">
+    <div>
+      <h5 class="fw-bold mb-0">Grade Sheet: {{ selected_class.name }}</h5>
+      <small class="text-muted">{{ selected_subject.name }} &middot; {{ selected_term.name }} ({{ selected_session.name }})</small>
+    </div>
+    <a href="{% url 'people:student_list' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-person-lines-fill me-1"></i> Per-Student Entry
+  </a>
+  </div>
+  
+  <form method="post" id="gradeEntryForm">
+    {% csrf_token %}
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Admission No</th>
+            <th>Student Name</th>
+            <th style="width: 150px;">Test Score (Max 40)</th>
+            <th style="width: 150px;">Exam Score (Max 60)</th>
+            <th>Total Score</th>
+            <th>Grade</th>
+            <th>Remark</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in students %}
+          <tr>
+            <td><code>{{ s.admission_no }}</code></td>
+            <td class="fw-semibold">{{ s.user.get_full_name }}</td>
+            <td>
+              <input type="number" name="test_{{ s.pk }}" class="form-control test-score-input" min="0" max="40" 
+                     value="{% if s.grade_obj %}{{ s.grade_obj.test_score }}{% else %}0{% endif %}" required>
+            </td>
+            <td>
+              <input type="number" name="exam_{{ s.pk }}" class="form-control exam-score-input" min="0" max="60" 
+                     value="{% if s.grade_obj %}{{ s.grade_obj.exam_score }}{% else %}0{% endif %}" required>
+            </td>
+            <td class="total-score-cell fw-bold">
+              {% if s.grade_obj %}{{ s.grade_obj.total_score }}{% else %}0{% endif %}
+            </td>
+            <td class="grade-cell">
+              {% if s.grade_obj %}
+                <span class="badge bg-secondary">{{ s.grade_obj.grade_letter }}</span>
+              {% else %}
+                <span class="badge bg-secondary-subtle text-secondary">F</span>
+              {% endif %}
+            </td>
+            <td class="remark-cell text-muted small">
+              {% if s.grade_obj %}{{ s.grade_obj.remark }}{% else %}Fail{% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="7" class="text-center text-muted py-4">No active students enrolled in this class.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if students %}
+    <div class="card-footer bg-white border-0 py-3 text-end">
+      <button type="submit" class="btn btn-primary px-4"><i class="bi bi-save me-1"></i> Save Grades</button>
+    </div>
+    {% endif %}
+    {% if page_obj and page_obj.has_other_pages %}
+    <div class="d-flex justify-content-between align-items-center px-4 py-3 border-top">
+      <p class="text-muted small mb-0">
+        Page <strong>{{ page_obj.number }}</strong> of <strong>{{ page_obj.paginator.num_pages }}</strong>
+        &nbsp;·&nbsp; {{ page_obj.paginator.count }} students total
+      </p>
+      <div class="d-flex gap-2">
+        {% if page_obj.has_previous %}
+          <a href="?student_class={{ selected_class_id }}&subject={{ selected_subject_id }}&session={{ selected_session_id }}&term={{ selected_term_id }}&page={{ page_obj.previous_page_number }}"
+             class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-chevron-left me-1"></i> Prev
+          </a>
+        {% else %}
+          <button class="btn btn-outline-secondary btn-sm" disabled>
+            <i class="bi bi-chevron-left me-1"></i> Prev
+          </button>
+        {% endif %}
+        {% if page_obj.has_next %}
+          <a href="?student_class={{ selected_class_id }}&subject={{ selected_subject_id }}&session={{ selected_session_id }}&term={{ selected_term_id }}&page={{ page_obj.next_page_number }}"
+             class="btn btn-outline-primary btn-sm">
+            Next <i class="bi bi-chevron-right ms-1"></i>
+          </a>
+        {% else %}
+          <button class="btn btn-outline-primary btn-sm" disabled>
+            Next <i class="bi bi-chevron-right ms-1"></i>
+          </button>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </form>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Helper context-like template filter simulation
+$(document).ready(function() {
+  $('#session, #term').change(function() {
+    if ($('#student_class').val() && $('#subject').val()) {
+      $('#filterForm').submit();
+    }
+  });
+
+  // Calculate scores client-side dynamically
+  function calculateGrade(score) {
+    if (score >= 70) return { letter: 'A', remark: 'Excellent' };
+    if (score >= 60) return { letter: 'B', remark: 'Very Good' };
+    if (score >= 50) return { letter: 'C', remark: 'Good' };
+    if (score >= 45) return { letter: 'D', remark: 'Pass' };
+    if (score >= 40) return { letter: 'E', remark: 'Weak Pass' };
+    return { letter: 'F', remark: 'Fail' };
+  }
+
+  $('.test-score-input, .exam-score-input').on('input', function() {
+    const row = $(this).closest('tr');
+    const testVal = parseInt(row.find('.test-score-input').val()) || 0;
+    const examVal = parseInt(row.find('.exam-score-input').val()) || 0;
+    const total = testVal + examVal;
+    
+    row.find('.total-score-cell').text(total);
+    const gr = calculateGrade(total);
+    row.find('.grade-cell').html(`<span class="badge bg-secondary">${gr.letter}</span>`);
+    row.find('.remark-cell').text(gr.remark);
+  });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,431 @@
+{% extends 'base.html' %}
+{% block title %}School Settings{% endblock %}
+
+{% block extra_css %}
+<style>
+  .settings-tab .nav-link {
+    color: #6b7280;
+    border: none;
+    padding: 0.65rem 1.25rem;
+    font-weight: 600;
+    font-size: 0.88rem;
+    border-radius: 8px;
+    transition: all 0.2s;
+  }
+  .settings-tab .nav-link:hover { background: rgba(0,0,0,0.05); color: var(--school-primary); }
+  .settings-tab .nav-link.active {
+    background: var(--school-primary) !important;
+    color: #fff !important;
+  }
+
+  .color-swatch-row {
+    display: flex; align-items: center; gap: 12px;
+  }
+  .color-swatch-row input[type=color] {
+    width: 52px; height: 52px;
+    padding: 3px; border-radius: 10px;
+    border: 2px solid rgba(0,0,0,0.12);
+    cursor: pointer;
+    background: none;
+  }
+  .hex-display {
+    font-family: monospace; font-size: 0.82rem;
+    background: #f3f4f6; padding: 3px 8px;
+    border-radius: 6px; color: #374151;
+    min-width: 72px; text-align: center;
+  }
+
+  .preview-card {
+    border-radius: 12px; overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+    border: none;
+  }
+  .preview-navbar {
+    padding: 10px 16px;
+    display: flex; align-items: center; gap: 10px;
+    font-weight: 700; font-size: 0.9rem; color: #fff;
+  }
+  .preview-sidebar {
+    padding: 12px 10px;
+    font-size: 0.75rem;
+  }
+  .preview-nav-item {
+    padding: 6px 10px; border-radius: 6px;
+    margin-bottom: 4px; font-weight: 600;
+    cursor: default;
+  }
+  .preview-body {
+    padding: 14px;
+    background: #f8fafc;
+    font-size: 0.78rem; color: #4b5563;
+  }
+
+  .section-icon {
+    width: 38px; height: 38px;
+    border-radius: 10px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 1.1rem; flex-shrink: 0;
+    background: color-mix(in srgb, var(--school-primary) 12%, white);
+    color: var(--school-primary);
+  }
+
+  .form-control, .form-select {
+    border-radius: 8px;
+    border: 1.5px solid #e5e7eb;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.9rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .form-control:focus {
+    border-color: var(--school-primary);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--school-primary) 15%, transparent);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-xl-10 col-lg-11">
+
+    {# ── Page Header ── #}
+    <div class="d-flex align-items-center gap-3 mb-4">
+      <div class="section-icon"><i class="bi bi-gear-fill"></i></div>
+      <div>
+        <h5 class="fw-bold mb-0">System Settings</h5>
+        <small class="text-muted">Configure school branding, contact info, and theme colors</small>
+      </div>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" id="settingsForm">
+      {% csrf_token %}
+
+      {# ── Tab Nav ── #}
+      <ul class="nav settings-tab bg-white rounded-3 p-2 shadow-sm mb-4 gap-1" id="settingsTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button class="nav-link active" id="tab-branding" data-bs-toggle="tab" data-bs-target="#pane-branding" type="button" role="tab">
+            <i class="bi bi-building me-1"></i> Branding
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="tab-contact" data-bs-toggle="tab" data-bs-target="#pane-contact" type="button" role="tab">
+            <i class="bi bi-telephone me-1"></i> Contact
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="tab-theme" data-bs-toggle="tab" data-bs-target="#pane-theme" type="button" role="tab">
+            <i class="bi bi-palette me-1"></i> Theme Colors
+          </button>
+        </li>
+      </ul>
+
+      {# ── Tab Content ── #}
+      <div class="tab-content">
+
+        {# ── Branding Tab ── #}
+        <div class="tab-pane fade show active" id="pane-branding" role="tabpanel">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+
+              <div class="d-flex align-items-center gap-2 mb-4">
+                <div class="section-icon"><i class="bi bi-image"></i></div>
+                <div><h6 class="fw-bold mb-0">School Identity</h6><small class="text-muted">Name, logo, and favicon</small></div>
+              </div>
+
+              <div class="row g-3">
+                <div class="col-12">
+                  <label class="form-label fw-semibold small">School Name</label>
+                  {{ form.school_name }}
+                </div>
+
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold small">Logo</label>
+                  {% if settings.logo %}
+                    <div class="mb-2 d-flex align-items-center gap-3">
+                      <img src="{{ settings.logo.url }}" height="56"
+                           class="border rounded-2 p-1 bg-white" id="logoPreviewImg"
+                           style="object-fit:contain; max-width:140px;">
+                      <small class="text-muted">Current logo</small>
+                    </div>
+                  {% else %}
+                    <div class="mb-2 p-3 bg-light rounded-2 text-muted text-center small" style="border: 2px dashed #d1d5db;" id="logoPreviewBox">
+                      <i class="bi bi-image fs-4 d-block mb-1"></i>No logo uploaded
+                    </div>
+                  {% endif %}
+                  {{ form.logo }}
+                  <small class="text-muted">PNG or SVG recommended. Max 2 MB.</small>
+                </div>
+
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold small">Favicon</label>
+                  {% if settings.favicon %}
+                    <div class="mb-2">
+                      <img src="{{ settings.favicon.url }}" height="32"
+                           class="border rounded p-1 bg-white">
+                      <small class="text-muted ms-2">Current favicon</small>
+                    </div>
+                  {% endif %}
+                  {{ form.favicon }}
+                  <small class="text-muted">ICO or 32×32 PNG. Shown in browser tab.</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {# ── Contact Tab ── #}
+        <div class="tab-pane fade" id="pane-contact" role="tabpanel">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+
+              <div class="d-flex align-items-center gap-2 mb-4">
+                <div class="section-icon"><i class="bi bi-card-text"></i></div>
+                <div><h6 class="fw-bold mb-0">Contact Details</h6><small class="text-muted">Shown on report cards and documents</small></div>
+              </div>
+
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold small"><i class="bi bi-telephone me-1"></i>Phone</label>
+                  {{ form.phone }}
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold small"><i class="bi bi-envelope me-1"></i>Email</label>
+                  {{ form.email }}
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold small"><i class="bi bi-globe me-1"></i>Website</label>
+                  {{ form.website }}
+                </div>
+                <div class="col-12">
+                  <label class="form-label fw-semibold small"><i class="bi bi-geo-alt me-1"></i>Address</label>
+                  {{ form.address }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {# ── Theme Colors Tab ── #}
+        <div class="tab-pane fade" id="pane-theme" role="tabpanel">
+          <div class="row g-4">
+
+            {# Color Pickers #}
+            <div class="col-lg-6">
+              <div class="card border-0 shadow-sm h-100">
+                <div class="card-body p-4">
+                  <div class="d-flex align-items-center gap-2 mb-4">
+                    <div class="section-icon"><i class="bi bi-droplet-fill"></i></div>
+                    <div><h6 class="fw-bold mb-0">Color Palette</h6><small class="text-muted">Click a swatch to change colors</small></div>
+                  </div>
+
+                  <div class="d-flex flex-column gap-4">
+
+                    <div>
+                      <label class="form-label fw-semibold small d-block mb-2">Primary Color <span class="text-muted fw-normal">(buttons, badges, accents)</span></label>
+                      <div class="color-swatch-row">
+                        {{ form.primary_color }}
+                        <div>
+                          <div class="hex-display" id="hex_primary">{{ settings.primary_color }}</div>
+                          <small class="text-muted d-block mt-1">Buttons &amp; links</small>
+                        </div>
+                        <div class="flex-grow-1">
+                          <div id="preview_primary" class="rounded-2" style="height:36px; background:{{ settings.primary_color }};"></div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label class="form-label fw-semibold small d-block mb-2">Secondary Color <span class="text-muted fw-normal">(gradients, hover states)</span></label>
+                      <div class="color-swatch-row">
+                        {{ form.secondary_color }}
+                        <div>
+                          <div class="hex-display" id="hex_secondary">{{ settings.secondary_color }}</div>
+                          <small class="text-muted d-block mt-1">Gradients</small>
+                        </div>
+                        <div class="flex-grow-1">
+                          <div id="preview_secondary" class="rounded-2" style="height:36px; background:{{ settings.secondary_color }};"></div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label class="form-label fw-semibold small d-block mb-2">Navbar Color <span class="text-muted fw-normal">(top navigation bar)</span></label>
+                      <div class="color-swatch-row">
+                        {{ form.navbar_color }}
+                        <div>
+                          <div class="hex-display" id="hex_navbar">{{ settings.navbar_color }}</div>
+                          <small class="text-muted d-block mt-1">Top nav</small>
+                        </div>
+                        <div class="flex-grow-1">
+                          <div id="preview_navbar" class="rounded-2" style="height:36px; background:{{ settings.navbar_color }};"></div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label class="form-label fw-semibold small d-block mb-2">Sidebar Color <span class="text-muted fw-normal">(left navigation panel)</span></label>
+                      <div class="color-swatch-row">
+                        {{ form.sidebar_color }}
+                        <div>
+                          <div class="hex-display" id="hex_sidebar">{{ settings.sidebar_color }}</div>
+                          <small class="text-muted d-block mt-1">Side nav</small>
+                        </div>
+                        <div class="flex-grow-1">
+                          <div id="preview_sidebar" class="rounded-2 border" style="height:36px; background:{{ settings.sidebar_color }};"></div>
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {# Live Preview Card #}
+            <div class="col-lg-6">
+              <div class="card border-0 shadow-sm h-100">
+                <div class="card-body p-4">
+                  <div class="d-flex align-items-center gap-2 mb-4">
+                    <div class="section-icon"><i class="bi bi-eye"></i></div>
+                    <div><h6 class="fw-bold mb-0">Live Preview</h6><small class="text-muted">Updates as you pick colors</small></div>
+                  </div>
+
+                  <div class="preview-card">
+                    {# Navbar Preview #}
+                    <div class="preview-navbar" id="prev_navbar" style="background: {{ settings.navbar_color }};">
+                      {% if settings.logo %}
+                        <img src="{{ settings.logo.url }}" height="22" style="object-fit:contain;">
+                      {% else %}
+                        <i class="bi bi-shield-check"></i>
+                      {% endif %}
+                      <span>{{ settings.school_name|default:"SchoolMS" }}</span>
+                      <span class="ms-auto badge rounded-pill px-2 py-1" id="prev_badge"
+                            style="background: {{ settings.primary_color }}; font-size:0.65rem;">Admin</span>
+                    </div>
+
+                    {# Sidebar + Body Preview #}
+                    <div class="d-flex" style="min-height:160px;">
+                      <div class="preview-sidebar" id="prev_sidebar"
+                           style="background: {{ settings.sidebar_color }}; width:110px; border-right: 1px solid rgba(0,0,0,0.07);">
+                        <div class="preview-nav-item text-white fw-bold mb-1"
+                             id="prev_navitem_active"
+                             style="background: {{ settings.primary_color }}; font-size:0.7rem;">
+                          <i class="bi bi-grid me-1"></i>Dashboard
+                        </div>
+                        <div class="preview-nav-item text-muted" style="font-size:0.7rem;">
+                          <i class="bi bi-people me-1"></i>Students
+                        </div>
+                        <div class="preview-nav-item text-muted" style="font-size:0.7rem;">
+                          <i class="bi bi-book me-1"></i>Academics
+                        </div>
+                        <div class="preview-nav-item text-muted" style="font-size:0.7rem;">
+                          <i class="bi bi-cash me-1"></i>Finance
+                        </div>
+                      </div>
+                      <div class="preview-body flex-grow-1">
+                        <div class="d-flex gap-2 mb-2">
+                          <div class="rounded-2 p-2 bg-white shadow-sm flex-fill text-center">
+                            <div class="fw-bold" style="color: var(--school-primary); font-size:1rem;" id="prev_stat1">248</div>
+                            <div class="text-muted" style="font-size:0.65rem;">Students</div>
+                          </div>
+                          <div class="rounded-2 p-2 bg-white shadow-sm flex-fill text-center">
+                            <div class="fw-bold" style="color: var(--school-primary); font-size:1rem;" id="prev_stat2">18</div>
+                            <div class="text-muted" style="font-size:0.65rem;">Teachers</div>
+                          </div>
+                        </div>
+                        <div class="rounded-2 p-2 bg-white shadow-sm">
+                          <div style="font-size:0.68rem; font-weight:600; color:#6b7280; text-transform:uppercase; letter-spacing:0.5px;">Button Preview</div>
+                          <button type="button" class="btn btn-sm mt-1 px-3 text-white fw-bold"
+                                  id="prev_btn"
+                                  style="background: {{ settings.primary_color }}; font-size:0.72rem; border-radius:6px; border:none;">
+                            Save Settings
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>{# /tab-content #}
+
+      {# ── Save Bar ── #}
+      <div class="mt-4 d-flex justify-content-end gap-2">
+        <a href="{% url 'dashboard:admin_dashboard' %}" class="btn btn-light border px-4">
+          <i class="bi bi-x me-1"></i>Cancel
+        </a>
+        <button type="submit" class="btn btn-primary px-5">
+          <i class="bi bi-save me-2"></i>Save Settings
+        </button>
+      </div>
+
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  // Map field id → targets
+  const map = {
+    id_primary_color: {
+      hex: '#hex_primary',
+      swatch: '#preview_primary',
+      liveTargets: ['#prev_badge', '#prev_navitem_active', '#prev_btn'],
+      cssVar: '--school-primary',
+    },
+    id_secondary_color: {
+      hex: '#hex_secondary',
+      swatch: '#preview_secondary',
+      cssVar: '--school-secondary',
+    },
+    id_navbar_color: {
+      hex: '#hex_navbar',
+      swatch: '#preview_navbar',
+      liveTargets: ['#prev_navbar'],
+      cssVar: '--school-navbar',
+    },
+    id_sidebar_color: {
+      hex: '#hex_sidebar',
+      swatch: '#preview_sidebar',
+      liveTargets: ['#prev_sidebar'],
+      cssVar: '--school-sidebar',
+    },
+  };
+
+  Object.entries(map).forEach(([id, cfg]) => {
+    const input = document.getElementById(id);
+    if (!input) return;
+
+    input.addEventListener('input', function () {
+      const val = this.value;
+
+      // Update hex label
+      if (cfg.hex) document.querySelector(cfg.hex).textContent = val;
+
+      // Update swatch bar
+      if (cfg.swatch) document.querySelector(cfg.swatch).style.background = val;
+
+      // Update CSS var on :root for immediate cascade
+      if (cfg.cssVar) document.documentElement.style.setProperty(cfg.cssVar, val);
+
+      // Update specific preview elements
+      if (cfg.liveTargets) {
+        cfg.liveTargets.forEach(sel => {
+          const el = document.querySelector(sel);
+          if (!el) return;
+          if (id === 'id_navbar_color') el.style.background = val;
+          else if (id === 'id_sidebar_color') el.style.background = val;
+          else el.style.background = val;  // primary/secondary → badge, btn, active nav
+        });
+      }
+    });
+  });
+})();
+</script>
+{% endblock %}

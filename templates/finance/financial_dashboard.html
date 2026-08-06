@@ -1,0 +1,287 @@
+{% extends 'base.html' %}
+{% block title %}Financial Analytics Dashboard{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold mb-1 text-dark">Financial Analytics</h4>
+    <p class="text-secondary small mb-0">Overview of student fee collections, school operational expenses, and net cashflow.</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'finance:expense_create' %}" class="btn btn-danger btn-sm d-flex align-items-center gap-1">
+      <i class="bi bi-dash-circle"></i> Log Expense
+    </a>
+    <a href="{% url 'finance:invoice_list' %}" class="btn btn-primary btn-sm d-flex align-items-center gap-1">
+      <i class="bi bi-wallet2"></i> View Invoices
+    </a>
+  </div>
+</div>
+
+<!-- Metrics Cards -->
+<div class="row g-3 mb-4 animate-fade-in">
+  <!-- Total Invoiced -->
+  <div class="col">
+    <div class="card metric-card metric-card-primary p-3 h-100">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <span class="text-muted small uppercase tracking-wider fw-bold">Total Invoiced</span>
+          <h3 class="fw-bold text-dark mt-2 mb-0">${{ total_billed|stringformat:".2f" }}</h3>
+        </div>
+        <div class="icon-shape bg-primary-glow">
+          <i class="bi bi-file-earmark-bar-graph"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Collected (Revenue) -->
+  <div class="col">
+    <div class="card metric-card metric-card-success p-3 h-100">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <span class="text-muted small uppercase tracking-wider fw-bold">Fee Revenue</span>
+          <h3 class="fw-bold text-success mt-2 mb-0">${{ total_collected|stringformat:".2f" }}</h3>
+        </div>
+        <div class="icon-shape bg-success-glow">
+          <i class="bi bi-check2-circle"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Outstanding -->
+  <div class="col">
+    <div class="card metric-card metric-card-warning p-3 h-100">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <span class="text-muted small uppercase tracking-wider fw-bold">Outstanding Fees</span>
+          <h3 class="fw-bold text-warning mt-2 mb-0">${{ outstanding|stringformat:".2f" }}</h3>
+        </div>
+        <div class="icon-shape bg-warning-glow">
+          <i class="bi bi-exclamation-triangle"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Total Expenses -->
+  <div class="col">
+    <div class="card metric-card metric-card-danger p-3 h-100">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <span class="text-muted small uppercase tracking-wider fw-bold">Total Expenses</span>
+          <h3 class="fw-bold text-danger mt-2 mb-0">${{ total_expenses|stringformat:".2f" }}</h3>
+        </div>
+        <div class="icon-shape bg-danger-glow">
+          <i class="bi bi-cash-coin"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Net Cashflow -->
+  <div class="col">
+    <div class="card metric-card {% if net_cashflow >= 0 %}metric-card-success{% else %}metric-card-danger{% endif %} p-3 h-100">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <span class="text-muted small uppercase tracking-wider fw-bold">Net Cashflow</span>
+          <h3 class="fw-bold {% if net_cashflow >= 0 %}text-success{% else %}text-danger{% endif %} mt-2 mb-0">
+            {% if net_cashflow >= 0 %}+{% endif %}${{ net_cashflow|stringformat:".2f" }}
+          </h3>
+        </div>
+        <div class="icon-shape {% if net_cashflow >= 0 %}bg-success-glow{% else %}bg-danger-glow{% endif %}">
+          <i class="bi bi-graph-{% if net_cashflow >= 0 %}up{% else %}down{% endif %}"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Collection Efficiency Progress Bar -->
+<div class="card p-4 mb-4 border-0 shadow-sm">
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <span class="fw-bold text-dark">Fee Collection Progress Indicator</span>
+    <span class="fw-bold text-success" id="progressPercentage">0%</span>
+  </div>
+  <div class="progress" style="height: 12px; border-radius: 6px;">
+    <div class="progress-bar bg-success progress-bar-striped progress-bar-animated" role="progressbar" id="progressBar" style="width: 0%; border-radius: 6px;"></div>
+  </div>
+</div>
+
+<!-- Charts Grid -->
+<div class="row g-4 mb-4">
+  <div class="col-md-8">
+    <div class="card p-4 h-100">
+      <h5 class="fw-bold text-dark mb-4"><i class="bi bi-activity me-1 text-primary"></i> Monthly Cashflow Trend</h5>
+      <div style="height: 320px; position: relative;">
+        <canvas id="cashflowChart"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card p-4 h-100">
+      <h5 class="fw-bold text-dark mb-4"><i class="bi bi-pie-chart-fill me-1 text-danger"></i> Expense Distribution</h5>
+      <div style="height: 320px; position: relative;">
+        <canvas id="expenseDistributionChart"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Transactions tables split -->
+<div class="row g-4">
+  <!-- Recent collections -->
+  <div class="col-md-6">
+    <div class="card h-100 p-4">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold text-dark mb-0"><i class="bi bi-arrow-down-left-circle-fill text-success me-1"></i> Recent Payments</h5>
+        <a href="{% url 'finance:invoice_list' %}" class="btn btn-link btn-sm text-decoration-none p-0">View All</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle">
+          <thead>
+            <tr>
+              <th>Receipt</th>
+              <th>Student</th>
+              <th>Method</th>
+              <th class="text-end">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for pay in recent_payments %}
+            <tr>
+              <td><code>{{ pay.receipt_no }}</code></td>
+              <td>{{ pay.invoice.student.user.get_full_name }}</td>
+              <td class="text-capitalize small text-secondary">{{ pay.get_payment_method_display }}</td>
+              <td class="fw-bold text-success text-end">${{ pay.amount_paid }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" class="text-center text-muted py-4">No payments recorded.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent expenses -->
+  <div class="col-md-6">
+    <div class="card h-100 p-4">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold text-dark mb-0"><i class="bi bi-arrow-up-right-circle-fill text-danger me-1"></i> Recent Expenses</h5>
+        <a href="{% url 'finance:expense_list' %}" class="btn btn-link btn-sm text-decoration-none p-0">View All</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle">
+          <thead>
+            <tr>
+              <th>Expense</th>
+              <th>Category</th>
+              <th>Date</th>
+              <th class="text-end">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for exp in recent_expenses %}
+            <tr>
+              <td class="fw-semibold text-dark">{{ exp.title }}</td>
+              <td class="text-capitalize small text-secondary">{{ exp.get_category_display }}</td>
+              <td class="small">{{ exp.date_spent|date:"M d" }}</td>
+              <td class="fw-bold text-danger text-end">${{ exp.amount }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" class="text-center text-muted py-4">No expenses recorded.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+$(document).ready(function() {
+  // Collection efficiency progress calculation
+  const totalBilled = parseFloat("{{ total_billed }}") || 0;
+  const totalCollected = parseFloat("{{ total_collected }}") || 0;
+  const percentage = totalBilled > 0 ? Math.round((totalCollected / totalBilled) * 100) : 0;
+  
+  $('#progressBar').css('width', percentage + '%');
+  $('#progressPercentage').text(percentage + '%');
+
+  // Cashflow Trend (Revenue vs Expenses)
+  const cashflowCtx = document.getElementById('cashflowChart').getContext('2d');
+  new Chart(cashflowCtx, {
+    type: 'bar',
+    data: {
+      labels: {{ sorted_months|safe }},
+      datasets: [
+        {
+          label: 'Fee Revenue',
+          data: {{ revenue_list|safe }},
+          backgroundColor: 'rgba(90, 103, 216, 0.75)',
+          borderColor: 'rgba(90, 103, 216, 1)',
+          borderWidth: 1,
+          borderRadius: 4
+        },
+        {
+          label: 'School Expenses',
+          data: {{ expense_list|safe }},
+          backgroundColor: 'rgba(229, 62, 62, 0.75)',
+          borderColor: 'rgba(229, 62, 62, 1)',
+          borderWidth: 1,
+          borderRadius: 4
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          beginAtZero: true,
+          grid: { color: 'rgba(0,0,0,0.04)' }
+        },
+        x: {
+          grid: { display: false }
+        }
+      },
+      plugins: {
+        legend: { position: 'top' }
+      }
+    }
+  });
+
+  // Expense categories doughnut
+  const expenseCtx = document.getElementById('expenseDistributionChart').getContext('2d');
+  new Chart(expenseCtx, {
+    type: 'doughnut',
+    data: {
+      labels: {{ category_labels|safe }},
+      datasets: [{
+        data: {{ category_data|safe }},
+        backgroundColor: [
+          'rgba(237, 137, 54, 0.75)',
+          'rgba(72, 187, 120, 0.75)',
+          'rgba(49, 151, 149, 0.75)',
+          'rgba(153, 102, 255, 0.75)',
+          'rgba(54, 162, 235, 0.75)',
+          'rgba(229, 62, 62, 0.75)'
+        ],
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom' }
+      }
+    }
+  });
+});
+</script>
+{% endblock %}

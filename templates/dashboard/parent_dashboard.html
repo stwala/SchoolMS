@@ -1,0 +1,173 @@
+{% extends 'base.html' %}
+{% block title %}Parent Dashboard{% endblock %}
+
+{% block content %}
+<!-- Welcome Header -->
+<div class="row g-3 mb-4 animate-fade-in">
+  <div class="col-md-8">
+    <div class="card shadow-sm border-0 bg-primary text-white p-4 h-100">
+      <h3 class="fw-bold mb-1">Welcome back, Parent!</h3>
+      <p class="mb-0 opacity-75">Oversee your children's academic results, daily attendance history, and fee invoices statements.</p>
+    </div>
+  </div>
+
+  <!-- Children Selector -->
+  <div class="col-md-4">
+    <div class="card shadow-sm border-0 p-3 h-100 justify-content-center">
+      <form method="get" id="childSelectorForm">
+        <label for="child_id" class="form-label small fw-semibold text-muted uppercase tracking-wider mb-1">Select Child profile</label>
+        <select name="child_id" id="child_id" class="form-select" onchange="document.getElementById('childSelectorForm').submit();">
+          {% for child in children %}
+            <option value="{{ child.pk }}" {% if selected_child and selected_child.pk == child.pk %}selected{% endif %}>{{ child.user.get_full_name }}</option>
+          {% empty %}
+            <option value="">No linked children</option>
+          {% endfor %}
+        </select>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% if selected_child %}
+<div class="row g-4">
+  <!-- Child Academic Grades -->
+  <div class="col-md-7">
+  <div class="card shadow-sm border-0 p-4 h-100">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h5 class="fw-bold text-dark mb-0">Academic Grades: {{ selected_child.user.get_full_name }}</h5>
+      {% if not grades_locked %}
+        <a href="{% url 'academics:student_report_card' selected_child.pk %}" 
+           class="btn btn-sm btn-outline-primary">
+          <i class="bi bi-file-text"></i> Full Report Card
+        </a>
+      {% endif %}
+    </div>
+
+    {% if grades_locked %}
+      <!-- ── Locked state ── -->
+      <div class="text-center py-5">
+        <i class="bi bi-lock-fill fs-1 text-muted d-block mb-3"></i>
+        <h6 class="fw-bold text-dark">Grades Not Available</h6>
+        <p class="text-muted small mb-3">
+          Grades will be released once school fees are fully paid.
+        </p>
+        {% if unpaid_invoices %}
+          <a href="{% url 'finance:invoice_detail' unpaid_invoices.0.pk %}" 
+             class="btn btn-primary btn-sm">
+            <i class="bi bi-wallet2 me-1"></i> Pay Fees Now
+          </a>
+        {% endif %}
+      </div>
+
+    {% else %}
+      <!-- ── Grades table ── -->
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Subject</th>
+              <th class="text-center">CA</th>
+              <th class="text-center">Exam</th>
+              <th class="text-center">Total</th>
+              <th class="text-center">Grade</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for g in grades %}
+            <tr>
+              <td class="fw-semibold text-dark">{{ g.subject.name }}</td>
+              <td class="text-center">{{ g.test_score }}</td>
+              <td class="text-center">{{ g.exam_score }}</td>
+              <td class="text-center fw-bold text-dark">{{ g.total_score }}</td>
+              <td class="text-center">
+                <span class="badge
+                  {% if g.grade_letter == 'A' %}bg-success
+                  {% elif g.grade_letter == 'B' or g.grade_letter == 'C' %}bg-info
+                  {% else %}bg-secondary{% endif %}">
+                  {{ g.grade_letter }}
+                </span>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="5" class="text-center text-muted py-4">
+                No grades entered for this active term.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+
+  </div>
+
+  </div>
+
+  <!-- Child Attendance and Fees Invoices -->
+  <div class="col-md-5">
+    <div class="row g-3">
+      <!-- Attendance Rate -->
+      <div class="col-12">
+        <div class="card shadow-sm border-0 p-3 bg-white">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="text-muted small uppercase tracking-wider mb-0">Attendance Completion</h6>
+            <span class="badge {% if att_rate < 75 %}bg-danger{% else %}bg-success{% endif %}">{{ att_rate|stringformat:".1f" }}%</span>
+          </div>
+          <div class="progress mb-2" style="height: 8px;">
+            <div class="progress-bar {% if att_rate < 75 %}bg-danger{% else %}bg-success{% endif %}" role="progressbar" style="width: {{ att_rate }}%;"></div>
+          </div>
+          <small class="text-muted">Enrolled Class: {{ selected_child.student_class.name|default:"Not Assigned" }}</small>
+        </div>
+      </div>
+
+      <!-- Fees Invoice -->
+      <div class="col-12">
+        <div class="card shadow-sm border-0 p-3 bg-white">
+          <h5 class="fw-bold text-dark mb-2 small uppercase tracking-wider text-muted">Outstanding Fee Statements</h5>
+          {% if unpaid_invoices %}
+            {% for inv in unpaid_invoices %}
+            <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+              <div>
+                <span class="small fw-semibold text-dark">{{ inv.term.name }} Statement</span>
+                <span class="d-block text-muted small">Due: ${{ inv.balance }}</span>
+              </div>
+              <a href="{% url 'finance:invoice_detail' inv.pk %}" class="btn btn-sm btn-outline-secondary">Pay/Statement</a>
+            </div>
+            {% endfor %}
+          {% else %}
+          <div class="text-success small py-2"><i class="bi bi-check-circle-fill"></i> All fees fully paid for {{ selected_child.user.first_name }}!</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Parent Notice Announcements -->
+<div class="row g-4 mt-2">
+  <div class="col-md-12">
+    <div class="card shadow-sm border-0 p-4">
+      <h5 class="fw-bold text-dark mb-3">General Notice Board Announcements</h5>
+      <div class="list-group list-group-flush">
+        {% for notice in notices %}
+        <div class="list-group-item border-0 px-0 py-3">
+          <div class="d-flex w-100 justify-content-between">
+            <h6 class="fw-bold text-dark mb-1">{{ notice.title }}</h6>
+            <small class="text-muted">{{ notice.created_at|date:"M d, Y" }}</small>
+          </div>
+          <p class="text-secondary small mb-1">{{ notice.content }}</p>
+          <small class="text-muted">Posted by: {{ notice.author.get_full_name }}</small>
+        </div>
+        {% empty %}
+        <div class="text-center py-4 text-muted">
+          <i class="bi bi-megaphone fs-3 d-block mb-2 text-muted"></i>
+          No active announcements.
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,440 @@
+{% extends 'base.html' %}
+{% block title %}Students Directory{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h5 class="fw-bold mb-0 text-dark">Students Directory</h5>
+    {% if teacher %}
+      <p class="text-secondary small mb-0">
+        <i class="bi bi-filter-circle me-1 text-primary"></i>
+        Showing students from your assigned class(es):
+        <strong>{{ teacher.assigned_classes.all|join:", " }}</strong>
+      </p>
+    {% else %}
+      <p class="text-secondary small mb-0">All enrolled active students.</p>
+    {% endif %}
+  </div>
+  {% if user.is_admin %}
+<div class="d-flex gap-2">
+  <a href="{% url 'people:student_bulk_upload' %}" class="btn btn-outline-primary btn-sm">
+    <i class="bi bi-upload me-1"></i> Bulk Import
+  </a>
+  <a href="{% url 'people:student_create' %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-person-plus me-1"></i> Add Student
+  </a>
+</div>
+{% endif %}
+</div>
+
+
+<form method="get" class="mb-3 d-flex gap-2">
+  <input type="text" name="q" value="{{ request.GET.q }}"
+         class="form-control" placeholder="Search by name, admission no, or class…">
+  <button class="btn btn-outline-primary px-3" type="submit">
+    <i class="bi bi-search"></i>
+  </button>
+  {% if request.GET.q %}
+  <a href="{% url 'people:student_list' %}" class="btn btn-outline-secondary px-3">
+    <i class="bi bi-x-lg"></i>
+  </a>
+  {% endif %}
+</form>
+<div class="card border-0 shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0" id="studentTable">
+      <thead class="table-light">
+        <tr>
+          <th>Admission No</th>
+          <th>Student Name</th>
+          <th>Class</th>
+          <th>Gender</th>
+          <!-- <th>Blood Group</th> -->
+          <th>Enrolled</th>
+          
+          <th class="text-center px-4">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for s in students %}
+      <tr>
+        <td><code>{{ s.admission_no }}</code></td>
+        <td class="fw-semibold text-dark">
+          <a href="{% url 'people:student_detail' s.pk %}" class="text-decoration-none text-primary">{{ s.user.get_full_name }}</a>
+        </td>
+        <td>
+          {% if s.student_class %}
+            <span class="badge bg-primary-subtle text-black fw-semibold">{{ s.student_class.name }}</span>
+          {% else %}
+            <span class="text-muted small">Unassigned</span>
+          {% endif %}
+        </td>
+        <td>{{ s.get_gender_display }}</td>
+        <!-- <td>{{ s.blood_group|default:"—" }}</td> -->
+        <td class="text-secondary small">{{ s.enroll_date|date:"M d, Y" }}</td>
+        <td class="text-center px-4">
+          <button class="btn btn-sm btn-outline-primary me-1 btn-grade-modal"
+                  data-student-id="{{ s.pk }}"
+                  data-url="{% url 'people:student_grades_json' s.pk %}">
+            <i class="bi bi-journal-check me-1"></i>Grades
+          </button>
+          {% if user.is_admin %}
+           <button class="btn btn-sm me-1 btn-toggle-grades {% if s.grades_visible %}btn-success{% else %}btn-outline-secondary{% endif %}"
+                    data-url="{% url 'people:student_toggle_grades' s.pk %}"
+                    title="{% if s.grades_visible %}Grades visible to parent{% else %}Grades hidden from parent{% endif %}">
+              <i class="bi {% if s.grades_visible %}bi-eye{% else %}bi-eye-slash{% endif %}"></i>
+            </button>
+
+          <a href="{% url 'people:student_update' s.pk %}" class="btn btn-sm btn-outline-secondary me-1">
+            <i class="bi bi-pencil"></i>
+          </a>
+          <button class="btn btn-sm btn-outline-danger btn-delete"
+                  data-id="{{ s.pk }}" data-url="{% url 'people:student_delete' s.pk %}">
+            <i class="bi bi-trash"></i>
+          </button>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="7" class="text-center text-muted py-5">No students found.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  
+</div>
+<!-- Pagination -->
+{% if page_obj.has_other_pages %}
+<div class="d-flex justify-content-between align-items-center mt-3 px-1">
+  
+  <p class="text-muted small mb-0">
+    Showing
+    <strong>{{ page_obj.start_index }}</strong>–
+    <strong>{{ page_obj.end_index }}</strong>
+    of
+    <strong>{{ page_obj.paginator.count }}</strong>
+    students
+    &nbsp;·&nbsp;
+    Page <strong>{{ page_obj.number }}</strong> of <strong>{{ page_obj.paginator.num_pages }}</strong>
+</p>
+
+  <div class="d-flex gap-2">
+    <!-- Previous -->
+    {% if page_obj.has_previous %}
+      <a href="?page={{ page_obj.previous_page_number }}&q={{ request.GET.q }}"
+         class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-chevron-left me-1"></i> Prev
+      </a>
+    {% else %}
+      <button class="btn btn-outline-secondary btn-sm" disabled>
+        <i class="bi bi-chevron-left me-1"></i> Prev
+      </button>
+    {% endif %}
+
+    <!-- Next -->
+    {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}&q={{ request.GET.q }}"
+         class="btn btn-outline-primary btn-sm">
+        Next <i class="bi bi-chevron-right ms-1"></i>
+      </a>
+    {% else %}
+      <button class="btn btn-outline-primary btn-sm" disabled>
+        Next <i class="bi bi-chevron-right ms-1"></i>
+      </button>
+    {% endif %}
+  </div>
+
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+
+<!-- ── Grade Entry Modal ─────────────────────────────────── -->
+<div class="modal fade" id="gradeModal" tabindex="-1" aria-labelledby="gradeModalLabel" aria-hidden="true" >
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
+      <!-- Header gradient -->
+      <div class="modal-header border-0 text-white"
+           style="background: linear-gradient(135deg, hsl(235,65%,55%) 0%, hsl(245,60%,45%) 100%); padding: 1.5rem 2rem;">
+        <div>
+          <h5 class="modal-title fw-bold mb-0" id="gradeModalLabel">
+            <i class="bi bi-journal-check me-2"></i>Grade Entry
+          </h5>
+          <p class="mb-0 small opacity-75" id="gradeModalSubtitle">Loading student details…</p>
+        </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <div class="modal-body p-0">
+        <!-- Student info strip -->
+        <div id="gradeModalStudentInfo" class="px-4 py-3 border-bottom"
+             style="background: #f8faff;">
+          <div class="d-flex gap-4">
+            <div>
+              <span class="text-muted small">Admission No</span>
+              <p class="fw-bold mb-0 text-dark" id="infoAdmission">—</p>
+            </div>
+            <div>
+              <span class="text-muted small">Class</span>
+              <p class="fw-bold mb-0 text-dark" id="infoClass">—</p>
+            </div>
+            <div>
+              <span class="text-muted small">Term</span>
+              <p class="fw-bold mb-0 text-dark" id="infoTerm">—</p>
+            </div>
+            <div>
+              <span class="text-muted small">Session</span>
+              <p class="fw-bold mb-0 text-dark" id="infoSession">—</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Loading state -->
+        <div id="gradeModalLoading" class="text-center py-5 d-none">
+          <div class="spinner-border text-primary" role="status"></div>
+          <p class="text-muted mt-2 small">Loading subjects…</p>
+        </div>
+
+        <!-- Error state -->
+        <div id="gradeModalError" class="alert alert-danger mx-4 mt-3 d-none" role="alert"></div>
+
+        <!-- Grades form -->
+        <form id="gradeEntryForm" class="px-4 pt-3 pb-2">
+          <input type="hidden" id="hiddenStudentId" name="student_id">
+          <input type="hidden" id="hiddenSessionId" name="session_id">
+          <input type="hidden" id="hiddenTermId" name="term_id">
+
+          <div id="gradeSubjectsTable">
+            <!-- Populated by JS -->
+          </div>
+        </form>
+      </div>
+
+      <div class="modal-footer border-0 pt-0 pb-4 px-4 gap-2">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+          <i class="bi bi-x-lg me-1"></i>Cancel
+        </button>
+        <button type="button" class="btn btn-primary px-4" id="btnSaveGrades">
+          <i class="bi bi-save me-1"></i>Save All Grades
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+const SAVE_GRADES_URL = "{% url 'academics:save_student_grades' %}";
+
+$.ajaxSetup({
+  headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+});
+
+function calculateGrade(score) {
+  if (score >= 70) return { letter: 'A', remark: 'Excellent',  badge: 'bg-success' };
+  if (score >= 60) return { letter: 'B', remark: 'Very Good',  badge: 'bg-primary' };
+  if (score >= 50) return { letter: 'C', remark: 'Good',       badge: 'bg-info'    };
+  if (score >= 45) return { letter: 'D', remark: 'Pass',       badge: 'bg-warning text-dark' };
+  if (score >= 40) return { letter: 'E', remark: 'Weak Pass',  badge: 'bg-secondary' };
+  return             { letter: 'F', remark: 'Fail',       badge: 'bg-danger'  };
+}
+
+function renderSubjectsTable(subjects) {
+  if (!subjects || subjects.length === 0) {
+    return `<div class="text-center text-muted py-4">
+      <i class="bi bi-journal-x fs-3 d-block mb-2"></i>No subjects assigned to this class.
+    </div>`;
+  }
+  const rows = subjects.map(s => {
+    const g = calculateGrade(s.total ?? 0);
+    return `
+      <tr data-subject-id="${s.id}">
+        <td class="fw-semibold text-dark">${s.name}</td>
+        <td style="width:140px">
+          <input type="number" class="form-control form-control-sm test-input"
+                 name="test_${s.id}" min="0" max="40" value="${s.test_score ?? 0}"
+                 data-subject="${s.id}">
+          <small class="text-muted">Max: 40</small>
+        </td>
+        <td style="width:140px">
+          <input type="number" class="form-control form-control-sm exam-input"
+                 name="exam_${s.id}" min="0" max="60" value="${s.exam_score ?? 0}"
+                 data-subject="${s.id}">
+          <small class="text-muted">Max: 60</small>
+        </td>
+        <td class="fw-bold text-center" id="total-${s.id}">${s.total ?? 0}</td>
+        <td class="text-center" id="grade-${s.id}">
+          <span class="badge ${g.badge}">${g.letter}</span>
+        </td>
+        <td class="text-muted small" id="remark-${s.id}">${g.remark}</td>
+      </tr>`;
+  }).join('');
+
+  return `
+    <div class="table-responsive">
+      <table class="table table-hover align-middle">
+        <thead>
+          <tr>
+            <th>Subject</th>
+            <th>Test Score</th>
+            <th>Exam Score</th>
+            <th class="text-center">Total</th>
+            <th class="text-center">Grade</th>
+            <th>Remark</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+$(document).ready(function () {
+
+  document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+  document.getElementById('gradeModal').classList.remove('show');
+  document.getElementById('gradeModal').style.display = 'none';
+  document.body.classList.remove('modal-open');
+  document.body.style.removeProperty('padding-right');
+
+  const gradeModal = bootstrap.Modal.getOrCreateInstance(
+    document.getElementById('gradeModal')
+  );
+
+
+  // ── Live search ──
+  $('#searchInput').on('input', function () {
+    const q = $(this).val().toLowerCase();
+    $('#studentTable tbody tr').each(function () {
+      $(this).toggle($(this).text().toLowerCase().includes(q));
+    });
+  });
+
+  // ── Open grade modal ──
+  $(document).on('click', '.btn-grade-modal', function () {
+    const url = $(this).data('url');
+
+    // Reset state
+    $('#gradeModalLabel').html('<i class="bi bi-journal-check me-2"></i>Grade Entry');
+    $('#gradeModalSubtitle').text('Loading student details…');
+    $('#gradeModalLoading').removeClass('d-none');
+    $('#gradeModalError').addClass('d-none').text('');
+    $('#gradeSubjectsTable').html('');
+    $('#infoAdmission, #infoClass, #infoTerm, #infoSession').text('—');
+    $('#hiddenStudentId, #hiddenSessionId, #hiddenTermId').val('');
+
+    gradeModal.show();
+
+    $.getJSON(url, function (data) {
+      $('#gradeModalLoading').addClass('d-none');
+
+      if (data.error) {
+        $('#gradeModalError').removeClass('d-none').text(data.error);
+        return;
+      }
+
+      $('#gradeModalLabel').html(`<i class="bi bi-journal-check me-2"></i>${data.student_name}`);
+      $('#gradeModalSubtitle').text('Enter test and exam scores for each subject');
+      $('#infoAdmission').text(data.admission_no);
+      $('#infoClass').text(data.class_name);
+      $('#infoTerm').text(data.term);
+      $('#infoSession').text(data.session);
+      $('#hiddenStudentId').val(data.student_id);
+      $('#hiddenSessionId').val(data.session_id);
+      $('#hiddenTermId').val(data.term_id);
+      $('#gradeSubjectsTable').html(renderSubjectsTable(data.subjects));
+
+    }).fail(function () {
+      $('#gradeModalLoading').addClass('d-none');
+      $('#gradeModalError').removeClass('d-none').text('Failed to load student data. Please try again.');
+    });
+  });
+
+  // ── Live score calculation ──
+  $(document).on('input', '.test-input, .exam-input', function () {
+    const subjectId = $(this).data('subject');
+    const row = $(`tr[data-subject-id="${subjectId}"]`);
+    const test = Math.min(parseInt(row.find('.test-input').val()) || 0, 40);
+    const exam = Math.min(parseInt(row.find('.exam-input').val()) || 0, 60);
+    const total = test + exam;
+    const g = calculateGrade(total);
+    $(`#total-${subjectId}`).text(total);
+    $(`#grade-${subjectId}`).html(`<span class="badge ${g.badge}">${g.letter}</span>`);
+    $(`#remark-${subjectId}`).text(g.remark);
+  });
+
+  // ── Save grades ──
+  $('#btnSaveGrades').on('click', function () {
+    const $btn = $(this).prop('disabled', true)
+                        .html('<span class="spinner-border spinner-border-sm me-1"></span> Saving…');
+
+    // Validate scores before submitting
+    let valid = true;
+    $('.test-input').each(function () {
+      if (parseInt($(this).val()) > 40) valid = false;
+    });
+    $('.exam-input').each(function () {
+      if (parseInt($(this).val()) > 60) valid = false;
+    });
+    if (!valid) {
+      alert('One or more scores exceed the maximum allowed.');
+      $btn.prop('disabled', false).html('<i class="bi bi-save me-1"></i>Save All Grades');
+      return;
+    }
+
+    $.post(SAVE_GRADES_URL, $('#gradeEntryForm').serialize())
+      .done(function (resp) {
+        if (resp.status === 'ok') {
+          $btn.html('<i class="bi bi-check2-circle me-1"></i>Saved!')
+              .addClass('btn-success').removeClass('btn-primary');
+          setTimeout(() => {
+            gradeModal.hide();
+            $btn.prop('disabled', false)
+                .html('<i class="bi bi-save me-1"></i>Save All Grades')
+                .addClass('btn-primary').removeClass('btn-success');
+          }, 1200);
+        } else {
+          alert(resp.error || 'Save failed.');
+          $btn.prop('disabled', false).html('<i class="bi bi-save me-1"></i>Save All Grades');
+        }
+      })
+      .fail(function () {
+        alert('Save request failed. Please try again.');
+        $btn.prop('disabled', false).html('<i class="bi bi-save me-1"></i>Save All Grades');
+      });
+  });
+
+  // ── Admin delete ──
+  $(document).on('click', '.btn-delete', function () {
+    const url = $(this).data('url');
+    const row = $(this).closest('tr');
+    if (!confirm('Delete this student? This also removes their login account.')) return;
+    $.post(url)
+      .done(() => row.fadeOut(300, () => row.remove()))
+      .fail(() => alert('Delete failed.'));
+  });
+
+    // ── Toggle grades visibility ──
+  $(document).on('click', '.btn-toggle-grades', function () {
+    const $btn = $(this);
+    const url  = $btn.data('url');
+
+    $.post(url)
+      .done(function (resp) {
+        if (resp.visible) {
+          $btn.removeClass('btn-outline-secondary').addClass('btn-success')
+              .find('i').removeClass('bi-eye-slash').addClass('bi-eye');
+          $btn.attr('title', 'Grades visible to parent');
+          toastr.success('Grades are now visible to parent.');
+        } else {
+          $btn.removeClass('btn-success').addClass('btn-outline-secondary')
+              .find('i').removeClass('bi-eye').addClass('bi-eye-slash');
+          $btn.attr('title', 'Grades hidden from parent');
+          toastr.warning('Grades hidden from parent.');
+        }
+      })
+      .fail(() => toastr.error('Failed to update visibility.'));
+  });
+
+});
+</script>
+{% endblock %}

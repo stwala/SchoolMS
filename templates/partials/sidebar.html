@@ -1,0 +1,172 @@
+{% load static %}
+<ul class="nav flex-column nav-pills gap-1 px-2">
+  <!-- DASHBOARD LINK -->
+  <li class="nav-item">
+    <a class="nav-link d-flex align-items-center {% if request.path == '/' or '/dashboard/' in request.path %}active text-white bg-primary{% else %}text-dark{% endif %}" href="/">
+      <i class="bi bi-speedometer2 me-2"></i> Dashboard
+    </a>
+  </li>
+
+  <!-- ADMIN / SUPERADMIN MENU -->
+  {% if user.is_admin %}
+    <!-- People Section -->
+    <li class="nav-item mt-3">
+      <span class="text-muted small px-3 text-uppercase tracking-wider fw-bold" style="font-size: 0.75rem;">People</span>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link d-flex align-items-center {% if '/people/students/' in request.path %}active text-white bg-primary{% else %}text-dark{% endif %}" href="{% url 'people:student_list' %}">
+        <i class="bi bi-mortarboard me-2"></i> Students
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link d-flex align-items-center {% if '/people/teachers/' in request.path %}active text-white bg-primary{% else %}text-dark{% endif %}" href="{% url 'people:teacher_list' %}">
+        <i class="bi bi-person-workspace me-2"></i> Teachers
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link d-flex align-items-center {% if '/people/parents/' in request.path %}active text-white bg-primary{% else %}text-dark{% endif %}" href="{% url 'people:parent_list' %}">
+        <i class="bi bi-people me-2"></i> Parents
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link d-flex align-items-center {% if '/accounts/users/' in request.path %}active text-white bg-primary{% else %}text-dark{% endif %}" href="{% url 'accounts:user_list' %}">
+        <i class="bi bi-person-gear me-2"></i> User Access
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link ..." href="{% url 'dashboard:school_settings' %}">
+        <i class="bi bi-gear me-2"></i> School Settings
+      </a>
+    </li>
+
+    <!-- Academics Section -->
+    <li class="nav-item mt-3">
+      <span class="text-muted small px-3 text-uppercase tracking-wider fw-bold" style="font-size: 0.75rem;">Academics</span>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link d-flex align-items-center {% if '/academics/classes/' in request.path %}active text-white bg-primary{% else %}text-dark{% endif %}" href="{% url 'academics:class_list' %}">
+        <i class="bi bi-door-open me-2"></i> Classes
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link d-flex align-items-center {% if '/academics/subjects/' in request.path %}active text-white bg-primary{% else %}text-dark{% endif %}" href="{% url 'academics:subject_list' %}">
+        <i class="bi bi-journal-text me-2"></i> Subjects
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link d-flex align-items-center {% if '/academics/sessions/' in request.path %}active text-white bg-primary{% else %}text-dark{% endif %}" href="{% url 'academics:session_list' %}">
+        <i class="bi bi-calendar-range me-2"></i> Sessions
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link d-flex align-items-center {% if '/academics/terms/' in request.path %}active text-white bg-primary{% else %}text-dark{% endif %}" href="{% url 'academics:term_list' %}">
+        <i class="bi bi-calendar-event me-2"></i> Terms
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link d-flex align-items-center {% if '/academics/grades/' in request.path %}active text-white bg-primary{% else %}text-dark{% endif %}" href="{% url 'academics:grade_entry' %}">
+        <i class="bi bi-journal-check me-2"></i> Grade Sheet
+      </a>
+    </li>
+
+    <!-- Attendance Section -->
+    <li class="nav-item mt-3">
+      <span class="text-muted small px-3 text-uppercase tracking-wider fw-bold" style="font-size: 0.75rem;">Attendance</span>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link d-flex align-items-center {% if '/attendance/record/' in request.path %}active text-white bg-primary{% else %}text-dark{% endif %}" href="{% url 'attendance:attendance_record' %}">
+        <i class="bi bi-calendar-check me-2"></i> Mark Attendance
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link d-flex align-items-center {% if '/attendance/report/' in request.path %}active text-white bg-primary{% else %}text-dark{% endif %}" href="{% url 'attendance:attendance_report' %}">
+        <i class="bi bi-graph-up me-2"></i> Stats Reports
+      </a>
+    </li>
+
+    <!-- Finance Section -->
+    <li class="nav-item mt-3">
+      <span class="text-muted small px-3 text-uppercase tracking-wider fw-bold" style="font-size: 0.75rem;">Finance</span>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link d-flex align-items-center {% if '/finance/analytics/' in request.path %}active text-white bg-primary{% else %}text-dark{% endif %}" href="{% url 'finance:financial_dashboard' %}">
+        <i class="bi bi-bar-chart-line-fill me-2"></i> Financial Analytics
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link d-flex align-items-center {% if '/finance/invoices/' in request.path %}active text-white bg-primary{% else %}text-dark{% endif %}" href="{% url 'finance:invoice_list' %}">
+        <i class="bi bi-wallet2 me-2"></i> Billing Invoices
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link d-flex align-items-center {% if '/finance/feetypes/' in request.path %}active text-white bg-primary{% else %}text-dark{% endif %}" href="{% url 'finance:fee_type_list' %}">
+        <i class="bi bi-tags me-2"></i> Fee Types
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link d-flex align-items-center {% if '/finance/expenses/' in request.path %}active text-white bg-primary{% else %}text-dark{% endif %}" href="{% url 'finance:expense_list' %}">
+        <i class="bi bi-cash-coin me-2"></i> School Expenses
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link d-flex align-items-center {% if '/finance/bulk/' in request.path %}active text-white bg-primary{% else %}text-dark{% endif %}" href="{% url 'finance:bulk_invoice' %}">
+        <i class="bi bi-stack me-2"></i> Bulk Bill
+      </a>
+    </li>
+
+  <!-- TEACHER MENU -->
+  {% elif user.is_teacher %}
+    <li class="nav-item mt-3">
+      <span class="text-muted small px-3 text-uppercase tracking-wider fw-bold" style="font-size: 0.75rem;">Classroom</span>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link d-flex align-items-center {% if '/attendance/record/' in request.path %}active text-white bg-primary{% else %}text-dark{% endif %}" href="{% url 'attendance:attendance_record' %}">
+        <i class="bi bi-calendar-check me-2"></i> Mark Attendance
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link d-flex align-items-center {% if '/attendance/report/' in request.path %}active text-white bg-primary{% else %}text-dark{% endif %}" href="{% url 'attendance:attendance_report' %}">
+        <i class="bi bi-graph-up-arrow me-2"></i> Attendance Stats
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link d-flex align-items-center {% if '/academics/grades/' in request.path %}active text-white bg-primary{% else %}text-dark{% endif %}" href="{% url 'academics:grade_entry' %}">
+        <i class="bi bi-journal-plus me-2"></i> Input Grades
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link d-flex align-items-center {% if '/people/students/' in request.path %}active text-white bg-primary{% else %}text-dark{% endif %}" href="{% url 'people:student_list' %}">
+        <i class="bi bi-mortarboard me-2"></i> Students Directory
+      </a>
+    </li>
+
+  <!-- STUDENT MENU -->
+  {% elif user.is_student %}
+    <li class="nav-item mt-3">
+      <span class="text-muted small px-3 text-uppercase tracking-wider fw-bold" style="font-size: 0.75rem;">My Records</span>
+    </li>
+    {% if user.student_profile %}
+    <li class="nav-item">
+      <a class="nav-link d-flex align-items-center {% if '/academics/report-card/' in request.path %}active text-white bg-primary{% else %}text-dark{% endif %}" href="{% url 'academics:student_report_card' user.student_profile.pk %}">
+        <i class="bi bi-file-earmark-spreadsheet me-2"></i> Report Card
+      </a>
+    </li>
+    {% endif %}
+    <li class="nav-item">
+      <a class="nav-link d-flex align-items-center {% if '/finance/invoices/' in request.path %}active text-white bg-primary{% else %}text-dark{% endif %}" href="{% url 'finance:invoice_list' %}">
+        <i class="bi bi-receipt me-2"></i> Fee Statement
+      </a>
+    </li>
+
+  <!-- PARENT MENU -->
+  {% elif user.is_parent %}
+    <li class="nav-item mt-3">
+      <span class="text-muted small px-3 text-uppercase tracking-wider fw-bold" style="font-size: 0.75rem;">Children billing</span>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link d-flex align-items-center {% if '/finance/invoices/' in request.path %}active text-white bg-primary{% else %}text-dark{% endif %}" href="{% url 'finance:invoice_list' %}">
+        <i class="bi bi-wallet-fill me-2"></i> Fee Invoices
+      </a>
+    </li>
+  {% endif %}
+</ul>

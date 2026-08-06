@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Sign In — SchoolMS Academy{% endblock %}
+
+{% block auth_content %}
+<div class="min-vh-100 d-flex align-items-center justify-content-center"
+     style="background: linear-gradient(135deg, hsl(235,60%,20%) 0%, hsl(250,50%,35%) 50%, hsl(220,60%,25%) 100%);">
+  <div class="text-center mb-5 position-absolute top-0 start-0 end-0 pt-5 d-none d-md-block">
+    <!-- Decorative background shapes -->
+  </div>
+
+  <div class="card border-0 shadow-lg p-0 overflow-hidden animate-fade-in"
+       style="width: 420px; border-radius: 18px; background: rgba(255,255,255,0.97);">
+
+    <!-- Top accent bar -->
+    <div style="height: 5px; background: linear-gradient(90deg, hsl(235,60%,55%), hsl(260,70%,65%));"></div>
+
+    <div class="p-5">
+      <!-- Logo / Brand -->
+      <div class="text-center mb-4">
+        <div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-primary-subtle mb-3"
+             style="width: 64px; height: 64px;">
+          <i class="bi bi-shield-check text-primary fs-2"></i>
+        </div>
+        <h3 class="fw-bold text-dark mb-1" style="font-family: 'Outfit', sans-serif;">SchoolMS Academy</h3>
+        <p class="text-muted small mb-0">Sign in to your account portal</p>
+      </div>
+
+      {% if form.errors %}
+        <div class="alert alert-danger border-0 py-2 small mb-3" style="border-radius: 8px;">
+          <i class="bi bi-exclamation-triangle-fill me-1"></i>
+          Invalid username or password. Please try again.
+        </div>
+      {% endif %}
+
+      <form method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+          <label class="form-label fw-semibold small text-dark" for="id_username">Username</label>
+          <div class="input-group">
+            <span class="input-group-text bg-light border-end-0">
+              <i class="bi bi-person text-muted"></i>
+            </span>
+            <input type="text" name="username" id="id_username" class="form-control border-start-0 bg-light"
+                   placeholder="Enter your username" autofocus required
+                   style="border-radius: 0 8px 8px 0;">
+          </div>
+        </div>
+        <div class="mb-4">
+          <label class="form-label fw-semibold small text-dark" for="id_password">Password</label>
+          <div class="input-group">
+            <span class="input-group-text bg-light border-end-0">
+              <i class="bi bi-lock text-muted"></i>
+            </span>
+            <input type="password" name="password" id="id_password" class="form-control border-start-0 bg-light"
+                   placeholder="Enter your password" required
+                   style="border-radius: 0 8px 8px 0;">
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold"
+                style="border-radius: 10px; font-size: 1rem;">
+          <i class="bi bi-box-arrow-in-right me-2"></i> Sign In
+        </button>
+      </form>
+
+      <div class="mt-4 pt-3 border-top text-center">
+        <small class="text-muted">
+          <i class="bi bi-shield-lock me-1"></i>
+          Secure login protected by CSRF & session middleware
+        </small>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  body { overflow: hidden; }
+  .form-control:focus, .form-select:focus {
+    border-color: hsl(235, 60%, 55%);
+    box-shadow: 0 0 0 3px rgba(90, 103, 216, 0.15);
+  }
+</style>
+{% endblock %}

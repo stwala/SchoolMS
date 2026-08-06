@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+
+{% block title %}Users{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="mb-0">Users</h5>
+  <a href="{% url 'accounts:user_create' %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-lg"></i> Add user
+  </a>
+</div>
+
+<!-- Search box (jQuery live filter) -->
+<input type="text" id="userSearch" class="form-control mb-3" placeholder="Search by name or role…">
+
+<div class="card">
+  <table class="table table-hover mb-0" id="userTable">
+    <thead class="table-light">
+      <tr>
+        <th>Name</th><th>Username</th><th>Email</th><th>Role</th><th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for u in users %}
+    <tr data-id="{{ u.pk }}">
+      <td>{{ u.get_full_name }}</td>
+      <td>{{ u.username }}</td>
+      <td>{{ u.email }}</td>
+      <td><span class="badge bg-secondary">{{ u.role }}</span></td>
+      <td>
+        <a href="{% url 'accounts:user_update' u.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
+        <button class="btn btn-sm btn-outline-danger btn-delete" data-id="{{ u.pk }}">Delete</button>
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Live search filter
+$('#userSearch').on('input', function () {
+  const q = $(this).val().toLowerCase();
+  $('#userTable tbody tr').each(function () {
+    $(this).toggle($(this).text().toLowerCase().includes(q));
+  });
+});
+
+// AJAX delete
+$('.btn-delete').on('click', function () {
+  const id  = $(this).data('id');
+  const row = $(this).closest('tr');
+  if (!confirm('Delete this user?')) return;
+  $.post(`/accounts/users/${id}/delete/`)
+    .done(() => row.fadeOut(300, () => row.remove()))
+    .fail(() => alert('Delete failed.'));
+});
+</script>
+{% endblock %}

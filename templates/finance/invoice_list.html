@@ -1,0 +1,103 @@
+{% extends 'base.html' %}
+{% block title %}Fee Invoices{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="fw-bold mb-0">Fee Invoices</h5>
+  {% if user.is_admin %}
+  <div class="d-flex gap-2">
+    <a href="{% url 'finance:bulk_invoice' %}" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-stack me-1"></i> Bulk Generate
+    </a>
+    <a href="{% url 'finance:invoice_create' %}" class="btn btn-primary btn-sm">
+      <i class="bi bi-plus-lg"></i> New Invoice
+    </a>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Search box (jQuery live filter) -->
+<input type="text" id="invoiceSearch" class="form-control mb-3" placeholder="Search by student, class, or status…">
+
+<div class="card shadow-sm border-0">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0" id="invoiceTable">
+      <thead class="table-light">
+        <tr>
+          <th>Student Name</th>
+          <th>Admission No</th>
+          <th>Class</th>
+          <th>Term</th>
+          <th>Total Payable</th>
+          <th>Total Paid</th>
+          <th>Balance</th>
+          <th>Status</th>
+          <th class="text-end px-4">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for inv in invoices %}
+        <tr id="invoice-row-{{ inv.pk }}">
+          <td class="fw-semibold text-dark">{{ inv.student.user.get_full_name }}</td>
+          <td><code>{{ inv.student.admission_no }}</code></td>
+          <td>{{ inv.student_class.name }}</td>
+          <td>{{ inv.term.name }}</td>
+          <td class="fw-bold text-secondary">${{ inv.total_payable }}</td>
+          <td class="fw-bold text-success">${{ inv.total_paid }}</td>
+          <td class="fw-bold {% if inv.balance > 0 %}text-danger{% else %}text-muted{% endif %}">${{ inv.balance }}</td>
+          <td>
+            {% if inv.status == 'paid' %}
+              <span class="badge bg-success-subtle text-success border"><i class="bi bi-check-circle-fill me-1"></i> Fully Paid</span>
+            {% elif inv.status == 'partial' %}
+              <span class="badge bg-warning-subtle text-warning border text-dark"><i class="bi bi-clock-history me-1"></i> Partially Paid</span>
+            {% else %}
+              <span class="badge bg-danger-subtle text-danger border"><i class="bi bi-x-circle-fill me-1"></i> Unpaid</span>
+            {% endif %}
+          </td>
+          <td class="text-end px-4">
+            <a href="{% url 'finance:invoice_detail' inv.pk %}" class="btn btn-sm btn-outline-primary me-1">
+              <i class="bi bi-eye"></i> View Statement
+            </a>
+            {% if user.is_admin %}
+              <button class="btn btn-sm btn-outline-danger btn-delete-invoice" data-id="{{ inv.pk }}" data-url="{% url 'finance:invoice_delete' inv.pk %}">
+                <i class="bi bi-trash"></i>
+              </button>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="9" class="text-center text-muted py-5">No invoices found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+  $('#invoiceSearch').on('input', function () {
+    const q = $(this).val().toLowerCase();
+    $('#invoiceTable tbody tr').each(function () {
+      $(this).toggle($(this).text().toLowerCase().includes(q));
+    });
+  });
+
+  $(document).on('click', '.btn-delete-invoice', function () {
+    const url = $(this).data('url');
+    const id = $(this).data('id');
+    const row = $(`#invoice-row-${id}`);
+    if (!confirm('Are you sure you want to delete this invoice? This deletes all associated items and payment records.')) return;
+    
+    $.post(url)
+      .done(() => {
+        row.fadeOut(300, () => row.remove());
+      })
+      .fail(() => {
+        alert('Delete failed.');
+      });
+  });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+{% block title %}Bulk Invoice Generator{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-8">
+    <div class="card shadow-sm border-0">
+      <div class="card-header bg-white border-0 pt-4 pb-0">
+        <h4 class="fw-bold mb-0 text-primary"><i class="bi bi-stack me-1"></i> Bulk Fee Invoicing</h4>
+        <p class="text-muted small mb-0">Generate fee invoices for an entire class of students at once.</p>
+      </div>
+      
+      <div class="card-body mt-2">
+        <form method="post">
+          {% csrf_token %}
+          
+          <div class="row g-3 mb-4">
+            <div class="col-md-12">
+              <label for="student_class" class="form-label fw-semibold">Class</label>
+              <select name="student_class" id="student_class" class="form-select" required>
+                <option value="">-- Choose Class --</option>
+                {% for c in classes %}
+                  <option value="{{ c.pk }}">{{ c.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            
+            <div class="col-md-6">
+              <label for="session" class="form-label fw-semibold">Academic Session</label>
+              <select name="session" id="session" class="form-select" required>
+                <option value="">-- Choose Session --</option>
+                {% for s in sessions %}
+                  <option value="{{ s.pk }}" {% if s.current %}selected{% endif %}>{{ s.name }} {% if s.current %}(Active){% endif %}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="col-md-6">
+              <label for="term" class="form-label fw-semibold">Academic Term</label>
+              <select name="term" id="term" class="form-select" required>
+                <option value="">-- Choose Term --</option>
+                {% for t in terms %}
+                  <option value="{{ t.pk }}" {% if t.current %}selected{% endif %}>{{ t.name }} {% if t.current %}(Active){% endif %}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <hr>
+
+          <h6 class="fw-bold text-dark mt-3 mb-2">Select Standard Fees to Apply:</h6>
+          <div class="row g-3 mb-4">
+            {% for fee in fee_types %}
+            <div class="col-md-6">
+              <div class="form-check p-3 border rounded h-100 bg-light-subtle">
+                <input class="form-check-input ms-0 me-2" type="checkbox" name="fee_types" value="{{ fee.pk }}" id="fee_{{ fee.pk }}">
+                <label class="form-check-label d-block fw-semibold text-dark cursor-pointer" for="fee_{{ fee.pk }}">
+                  {{ fee.name }}
+                  <span class="d-block text-success fw-bold font-monospace mt-1">${{ fee.amount }}</span>
+                  <span class="d-block text-muted small fw-normal mt-1">{{ fee.description|default:"No description" }}</span>
+                </label>
+              </div>
+            </div>
+            {% empty %}
+            <div class="col-12 py-3 text-center text-muted">
+              <i class="bi bi-exclamation-circle d-block fs-4 mb-2"></i>
+              No fee types defined yet. Please <a href="{% url 'finance:fee_type_list' %}">register a fee type</a> first.
+            </div>
+            {% endfor %}
+          </div>
+
+          <div class="alert alert-warning-subtle text-warning-emphasis border p-3">
+            <h6 class="fw-bold mb-1"><i class="bi bi-info-circle-fill"></i> Please Note:</h6>
+            <ul class="mb-0 small">
+              <li>Invoices will only be generated for <strong>active students</strong> enrolled in the selected class.</li>
+              <li>If a student already has an invoice generated for the selected session and term, a duplicate invoice will <strong>not</strong> be created.</li>
+            </ul>
+          </div>
+
+          <div class="text-end py-2">
+            <button type="submit" class="btn btn-primary btn-lg px-4"><i class="bi bi-gear-fill me-1"></i> Generate Bulk Invoices</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

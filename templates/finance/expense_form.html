@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-8">
+    <div class="card shadow-sm border-0">
+      <div class="card-header bg-white border-0 pt-4 pb-0 d-flex justify-content-between align-items-center">
+        <div>
+          <h4 class="fw-bold mb-1 text-danger"><i class="bi bi-dash-circle me-1"></i> {{ title }}</h4>
+          <p class="text-muted small mb-0">Record a new school operational or staff expenditure.</p>
+        </div>
+        <a href="{% url 'finance:expense_list' %}" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-arrow-left me-1"></i> Back to Expenses
+        </a>
+      </div>
+      
+      <div class="card-body mt-2">
+        <form method="post">
+          {% csrf_token %}
+          {% crispy form %}
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

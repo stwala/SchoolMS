@@ -1,0 +1,886 @@
+{% extends 'base.html' %}
+{% block title %}Teacher Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* ── Teacher Dashboard Styles ── */
+  .td-tab .nav-link {
+    color: #6b7280;
+    border: none;
+    padding: 0.6rem 1.1rem;
+    font-weight: 600;
+    font-size: 0.875rem;
+    border-radius: 8px;
+    transition: all 0.2s;
+  }
+  .td-tab .nav-link:hover   { background: rgba(0,0,0,0.05); color: var(--school-primary); }
+  .td-tab .nav-link.active  { background: var(--school-primary) !important; color: #fff !important; }
+  .td-tab .nav-link .badge  { font-size: 0.65rem; }
+
+  /* Hero strip */
+  .td-hero {
+    background: linear-gradient(135deg, var(--school-primary) 0%, var(--school-secondary) 100%);
+    border-radius: 14px;
+    padding: 28px 32px;
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+  }
+  .td-hero::before {
+    content: ''; position: absolute;
+    top: -50px; right: -50px;
+    width: 180px; height: 180px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.07);
+  }
+
+  /* Stat cards */
+  .td-stat {
+    text-align: center; padding: 16px;
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 10px; backdrop-filter: blur(4px);
+  }
+  .td-stat .val { font-size: 1.6rem; font-weight: 800; line-height: 1; }
+  .td-stat .lbl { font-size: 0.72rem; opacity: 0.82; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  /* Filter bar */
+  .filter-bar { background: #f8fafc; border-radius: 10px; padding: 16px 20px; }
+  .filter-bar .form-select, .filter-bar .form-control {
+    font-size: 0.85rem; border-radius: 8px; border: 1.5px solid #e5e7eb;
+  }
+  .filter-bar .form-select:focus { border-color: var(--school-primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--school-primary) 15%, transparent); }
+
+  /* Grade table */
+  .grade-table thead th {
+    background: var(--school-primary) !important;
+    color: #fff !important;
+    font-size: 0.72rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.4px;
+    border-color: transparent !important;
+  }
+  .grade-table tbody tr:nth-child(even) { background: #f8f9fb; }
+  .grade-table tbody tr:hover { background: color-mix(in srgb, var(--school-primary) 5%, transparent); }
+  .grade-table .score-input {
+    width: 80px; text-align: center;
+    border-radius: 6px; border: 1.5px solid #e5e7eb;
+    padding: 4px 6px; font-size: 0.85rem; font-weight: 600;
+    transition: border-color 0.2s;
+  }
+  .grade-table .score-input:focus {
+    border-color: var(--school-primary);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--school-primary) 15%, transparent);
+    outline: none;
+  }
+  .total-pill {
+    display: inline-block; min-width: 36px;
+    padding: 2px 8px; border-radius: 20px;
+    font-weight: 700; font-size: 0.82rem;
+    background: color-mix(in srgb, var(--school-primary) 10%, white);
+    color: var(--school-primary);
+  }
+
+  /* Grade letter colors */
+  .gl-A { background:#d1fae5 !important; color:#059669 !important; }
+  .gl-B { background:#dbeafe !important; color:#2563eb !important; }
+  .gl-C { background:#fef3c7 !important; color:#d97706 !important; }
+  .gl-D { background:#fee2e2 !important; color:#dc2626 !important; }
+  .gl-F { background:#ede9fe !important; color:#7c3aed !important; }
+
+  /* Report modal */
+  .trait-select {
+    font-size: 0.8rem; border-radius: 6px;
+    border: 1.5px solid #e5e7eb; padding: 3px 6px;
+    width: 100%; background: #fff;
+  }
+  .trait-select:focus {
+    border-color: var(--school-primary);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--school-primary) 15%, transparent);
+    outline: none;
+  }
+  .section-pill {
+    font-size: 0.68rem; font-weight: 800;
+    text-transform: uppercase; letter-spacing: 0.8px;
+    color: var(--school-primary);
+    border-bottom: 2px solid var(--school-primary);
+    padding-bottom: 4px; margin-bottom: 10px;
+    display: block;
+  }
+  .student-row-report {
+    cursor: pointer; transition: background 0.15s;
+  }
+  .student-row-report:hover { background: color-mix(in srgb, var(--school-primary) 6%, transparent) !important; }
+  .report-status-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    display: inline-block; margin-right: 5px;
+  }
+ #termReportModal .modal-dialog {
+    max-width: 1140px;
+    height: calc(100vh - 2rem);
+    margin: 1rem auto;
+}
+
+#termReportModal .modal-content {
+    height: 100%;
+}
+
+#termReportModal .modal-body {
+    overflow-y: auto !important;
+}
+
+/* Fix for modal scrolling */
+#termReportModal .modal-dialog {
+    max-height: 90vh !important;
+    margin: 1rem auto;
+}
+
+#termReportModal .modal-content {
+    max-height: 90vh !important;
+    display: flex;
+    flex-direction: column;
+}
+
+#termReportModal .modal-body {
+    overflow-y: auto !important;
+    flex: 1 1 auto;
+}
+
+#termReportModal .modal-header,
+#termReportModal .modal-footer {
+    flex-shrink: 0;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# ── Hero Header ── #}
+<div class="td-hero mb-4">
+  <div class="row align-items-center g-3">
+    <div class="col-lg-6">
+      <div class="d-flex align-items-center gap-3">
+        {% if teacher.user.profile_pic %}
+          <img src="{{ teacher.user.profile_pic.url }}" width="56" height="56"
+               class="rounded-circle border border-3 border-white" style="object-fit:cover;">
+        {% else %}
+          <div class="rounded-circle bg-white d-flex align-items-center justify-content-center"
+               style="width:56px;height:56px;flex-shrink:0;">
+            <i class="bi bi-person-fill fs-3" style="color:var(--school-primary);"></i>
+          </div>
+        {% endif %}
+        <div>
+          <h4 class="fw-bold mb-0">Welcome, {{ teacher.user.get_full_name }}!</h4>
+          <div class="opacity-75 small">
+            <i class="bi bi-person-badge me-1"></i>Staff ID: {{ teacher.staff_id }}
+            {% if active_session %} &nbsp;·&nbsp;
+              <i class="bi bi-calendar3 me-1"></i>{{ active_session.name }}
+              {% if active_term %}&nbsp;·&nbsp; {{ active_term.name }}{% endif %}
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <div class="row g-2 justify-content-lg-end">
+        <div class="col-auto"><div class="td-stat"><div class="val">{{ students_count }}</div><div class="lbl">My Students</div></div></div>
+        <div class="col-auto"><div class="td-stat"><div class="val">{{ my_classes|length }}</div><div class="lbl">Classes</div></div></div>
+        <div class="col-auto"><div class="td-stat">
+          <div class="val">{% if active_term %}{{ active_term.name|truncatechars:6 }}{% else %}—{% endif %}</div>
+          <div class="lbl">Active Term</div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ── Tab Nav ── #}
+<ul class="nav td-tab bg-white rounded-3 p-2 shadow-sm mb-4 gap-1 flex-wrap" id="tdTabs" role="tablist">
+  <li class="nav-item">
+    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-grades" type="button">
+      <i class="bi bi-journal-check me-1"></i> Grade Entry
+      {% if selected_class %}<span class="badge bg-white ms-1" style="color:var(--school-primary);">{{ class_students|length }}</span>{% endif %}
+    </button>
+  </li>
+  <li class="nav-item">
+    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-reports" type="button">
+      <i class="bi bi-file-person me-1"></i> Term Reports
+      {% if selected_class %}<span class="badge bg-white ms-1" style="color:var(--school-primary);">{{ class_students|length }}</span>{% endif %}
+    </button>
+  </li>
+  <li class="nav-item">
+    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-notices" type="button">
+      <i class="bi bi-megaphone me-1"></i> Notices
+      {% if notices %}<span class="badge bg-white ms-1" style="color:var(--school-primary);">{{ notices|length }}</span>{% endif %}
+    </button>
+  </li>
+</ul>
+
+<div class="tab-content">
+
+  {# ══════════════════════════════════════════════════════ #}
+  {# TAB 1 — GRADE ENTRY                                   #}
+  {# ══════════════════════════════════════════════════════ #}
+  <div class="tab-pane fade show active" id="tab-grades">
+
+    {# Filter Bar #}
+    <div class="filter-bar mb-4">
+      <form method="get" id="gradeFilterForm" class="row g-3 align-items-end">
+
+        <div class="col-sm-6 col-lg-3">
+          <label class="form-label small fw-semibold mb-1">Class</label>
+          <select name="student_class" class="form-select" id="fClass"
+                  onchange="this.form.submit()">
+            <option value="">— Select Class —</option>
+            {% for c in my_classes %}
+              <option value="{{ c.pk }}" {% if selected_class_id == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="col-sm-6 col-lg-3">
+          <label class="form-label small fw-semibold mb-1">Subject</label>
+          <select name="subject" class="form-select" id="fSubject"
+                  {% if not selected_class %}disabled{% endif %}
+                  onchange="this.form.submit()">
+            <option value="">— Select Subject —</option>
+            {% for subj in class_subjects %}
+              <option value="{{ subj.pk }}" {% if selected_subject_id == subj.pk|stringformat:"s" %}selected{% endif %}>{{ subj.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="col-sm-6 col-lg-2">
+          <label class="form-label small fw-semibold mb-1">Session</label>
+          <select name="session" class="form-select"
+                  {% if not selected_class %}disabled{% endif %}
+                  onchange="this.form.submit()">
+            {% for s in all_sessions %}
+              <option value="{{ s.pk }}" {% if selected_session_id == s.pk|stringformat:"s" %}selected{% endif %}>
+                {{ s.name }}{% if s.current %} ★{% endif %}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="col-sm-6 col-lg-2">
+          <label class="form-label small fw-semibold mb-1">Term</label>
+          <select name="term" class="form-select"
+                  {% if not selected_class %}disabled{% endif %}
+                  onchange="this.form.submit()">
+            {% for t in all_terms %}
+              <option value="{{ t.pk }}" {% if selected_term_id == t.pk|stringformat:"s" %}selected{% endif %}>
+                {{ t.name }}{% if t.current %} ★{% endif %}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="col-lg-2">
+          <button type="submit" class="btn btn-primary w-100">
+            <i class="bi bi-funnel me-1"></i> Filter
+          </button>
+        </div>
+      </form>
+    </div>
+
+    {% if selected_class and selected_subject and selected_session and selected_term %}
+    {# Grade Sheet #}
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center pt-3 pb-2">
+        <div>
+          <h6 class="fw-bold mb-0">
+            Grade Sheet — {{ selected_subject.name }}
+          </h6>
+          <small class="text-muted">
+            {{ selected_class.name }} &middot; {{ selected_term.name }} &middot; {{ selected_session.name }}
+            &nbsp;<span class="text-muted">| Test max: 40 &nbsp;·&nbsp; Exam max: 60 &nbsp;·&nbsp; Total: 100</span>
+          </small>
+        </div>
+        <a href="{% url 'academics:student_report_card' class_students.0.pk %}"
+           class="btn btn-outline-primary btn-sm d-none" id="viewReportBtn">
+          <i class="bi bi-file-text me-1"></i> Report Card
+        </a>
+      </div>
+
+      <form method="post" action="{% url 'dashboard:teacher_dashboard' %}?student_class={{ selected_class_id }}&session={{ selected_session_id }}&term={{ selected_term_id }}&subject={{ selected_subject_id }}"
+            id="gradeEntryForm">
+        {% csrf_token %}
+
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0 grade-table">
+            <thead>
+              <tr>
+                <th style="width:40px;">#</th>
+                <th>Student Name</th>
+                <th>Adm. No.</th>
+                <th style="width:110px;">Test<br><small class="fw-normal opacity-75">/40</small></th>
+                <th style="width:110px;">Exam<br><small class="fw-normal opacity-75">/60</small></th>
+                <th>Total</th>
+                <th>Grade</th>
+                <th>Remark</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for s in class_students %}
+              
+              <tr>
+                <td class="text-muted small">{{ forloop.counter }}</td>
+                <td class="fw-semibold">
+                  <div class="d-flex align-items-center gap-2">
+                    <div class="rounded-circle text-white d-flex align-items-center justify-content-center"
+                         style="width:30px;height:30px;font-size:0.72rem;font-weight:800;flex-shrink:0;background:var(--school-primary);">
+                      {{ s.user.first_name|first|upper }}{{ s.user.last_name|first|upper }}
+                    </div>
+                    {{ s.user.get_full_name }}
+                  </div>
+                </td>
+                <td><code class="small">{{ s.admission_no }}</code></td>
+                <td>
+  <input type="number" name="test_{{ s.pk }}"
+         class="score-input test-inp" min="0" max="40"
+         value="{{ s.selected_grade.test_score|default:0 }}"
+         placeholder="0">
+</td>
+<td>
+  <input type="number" name="exam_{{ s.pk }}"
+         class="score-input exam-inp" min="0" max="60"
+         value="{{ s.selected_grade.exam_score|default:0 }}"
+         placeholder="0">
+</td>
+                <td><span class="total-pill" id="tot_{{ s.pk }}">—</span></td>
+                <td><span class="badge grade-badge" id="gl_{{ s.pk }}">—</span></td>
+                <td class="remark-cell text-muted small" id="rmk_{{ s.pk }}">—</td>
+              </tr>
+             
+              {% empty %}
+              <tr><td colspan="8" class="text-center text-muted py-5">
+                <i class="bi bi-people fs-3 d-block mb-2"></i>No active students in this class.
+              </td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        {% if class_students %}
+        <div class="card-footer bg-white border-0 d-flex justify-content-between align-items-center py-3">
+          <small class="text-muted"><i class="bi bi-info-circle me-1"></i>Scores are automatically clamped to valid ranges on save.</small>
+          <button type="submit" class="btn btn-primary px-5">
+            <i class="bi bi-save me-2"></i>Save Grades
+          </button>
+        </div>
+        {% endif %}
+      </form>
+    </div>
+
+    {% elif selected_class %}
+    <div class="card border-0 shadow-sm">
+      <div class="card-body text-center py-5 text-muted">
+        <i class="bi bi-funnel fs-2 d-block mb-2"></i>
+        Select a <strong>Subject</strong>, <strong>Session</strong>, and <strong>Term</strong> above to load the grade sheet.
+      </div>
+    </div>
+    {% else %}
+    <div class="card border-0 shadow-sm">
+      <div class="card-body text-center py-5 text-muted">
+        <i class="bi bi-journals fs-2 d-block mb-2"></i>
+        Select a <strong>Class</strong> above to begin grade entry.
+      </div>
+    </div>
+    {% endif %}
+  </div>{# /tab-grades #}
+
+
+  {# ══════════════════════════════════════════════════════ #}
+  {# TAB 2 — TERM REPORTS                                  #}
+  {# ══════════════════════════════════════════════════════ #}
+  <div class="tab-pane fade" id="tab-reports">
+
+    {# Same class/session/term filter (synced via JS) #}
+    <div class="filter-bar mb-4">
+      <div class="row g-3 align-items-center">
+        <div class="col-auto">
+          <span class="fw-semibold small text-muted">Viewing:</span>
+        </div>
+        <div class="col-auto">
+          <span class="badge rounded-pill px-3 py-2" style="background:var(--school-primary);">
+            {% if selected_class %}{{ selected_class.name }}{% else %}No class selected{% endif %}
+          </span>
+        </div>
+        {% if selected_session %}<div class="col-auto"><span class="badge bg-secondary rounded-pill px-3 py-2">{{ selected_session.name }}</span></div>{% endif %}
+        {% if selected_term %}<div class="col-auto"><span class="badge bg-secondary rounded-pill px-3 py-2">{{ selected_term.name }}</span></div>{% endif %}
+        <div class="col-auto ms-auto">
+          <small class="text-muted"><i class="bi bi-info-circle me-1"></i>Use the Grade Entry tab filters to change class/session/term</small>
+        </div>
+      </div>
+    </div>
+
+    {% if class_students %}
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white border-0 pt-3 pb-2">
+        <h6 class="fw-bold mb-0">Term Report — Click a student to fill in their report</h6>
+        <small class="text-muted">Habits, attendance, teacher comment, and promotion status</small>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead>
+            <tr style="background:var(--school-primary);">
+              <th style="background:var(--school-primary);color:#fff;font-size:0.72rem;text-transform:uppercase;border:none;">#</th>
+              <th style="background:var(--school-primary);color:#fff;font-size:0.72rem;text-transform:uppercase;border:none;">Student</th>
+              <th style="background:var(--school-primary);color:#fff;font-size:0.72rem;text-transform:uppercase;border:none;">Adm. No.</th>
+              <th style="background:var(--school-primary);color:#fff;font-size:0.72rem;text-transform:uppercase;border:none;">Days Late</th>
+              <th style="background:var(--school-primary);color:#fff;font-size:0.72rem;text-transform:uppercase;border:none;">Days Absent</th>
+              <th style="background:var(--school-primary);color:#fff;font-size:0.72rem;text-transform:uppercase;border:none;">Promotion</th>
+              <th style="background:var(--school-primary);color:#fff;font-size:0.72rem;text-transform:uppercase;border:none;">Status</th>
+              <th style="background:var(--school-primary);color:#fff;font-size:0.72rem;text-transform:uppercase;border:none;">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for s in class_students %}
+            <tr class="student-row-report">
+              <td class="text-muted small">{{ forloop.counter }}</td>
+              <td class="fw-semibold">
+                <div class="d-flex align-items-center gap-2">
+                  <div class="rounded-circle text-white d-flex align-items-center justify-content-center"
+                       style="width:30px;height:30px;font-size:0.72rem;font-weight:800;flex-shrink:0;background:var(--school-primary);">
+                    {{ s.user.first_name|first|upper }}{{ s.user.last_name|first|upper }}
+                  </div>
+                  {{ s.user.get_full_name }}
+                </div>
+              </td>
+              <td><code class="small">{{ s.admission_no }}</code></td>
+              <td>{% if s.term_report %}{{ s.term_report.days_late }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
+              <td>{% if s.term_report %}{{ s.term_report.days_absent }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
+              <td>
+                {% if s.term_report %}
+                  {% if s.term_report.promotion_status == 'promoted' %}<span class="badge bg-success">Promoted</span>
+                  {% elif s.term_report.promotion_status == 'probation' %}<span class="badge bg-warning text-dark">Probation</span>
+                  {% elif s.term_report.promotion_status == 'not' %}<span class="badge bg-danger">Not Promoted</span>
+                  {% else %}<span class="badge bg-secondary">Pending</span>{% endif %}
+                {% else %}<span class="badge bg-light text-muted border">Not set</span>{% endif %}
+              </td>
+              <td>
+                {% if s.term_report %}
+                  <span class="report-status-dot" style="background:#10b981;"></span><small class="text-success fw-semibold">Saved</small>
+                {% else %}
+                  <span class="report-status-dot" style="background:#d1d5db;"></span><small class="text-muted">Not filled</small>
+                {% endif %}
+              </td>
+              <td>
+                <button class="btn btn-sm btn-outline-primary open-report-modal"
+                        data-student-id="{{ s.pk }}"
+                        data-student-name="{{ s.user.get_full_name }}"
+                        data-session-id="{{ selected_session_id }}"
+                        data-term-id="{{ selected_term_id }}"
+                        {# Pre-fill data #}
+                        data-days-late="{% if s.term_report %}{{ s.term_report.days_late }}{% else %}0{% endif %}"
+                        data-days-absent="{% if s.term_report %}{{ s.term_report.days_absent }}{% else %}0{% endif %}"
+                        data-follows-directions="{% if s.term_report %}{{ s.term_report.follows_directions }}{% else %}2{% endif %}"
+                        data-works-independently="{% if s.term_report %}{{ s.term_report.works_independently }}{% else %}2{% endif %}"
+                        data-attentive-in-class="{% if s.term_report %}{{ s.term_report.attentive_in_class }}{% else %}2{% endif %}"
+                        data-does-work-neatly="{% if s.term_report %}{{ s.term_report.does_work_neatly }}{% else %}2{% endif %}"
+                        data-completes-daily-work="{% if s.term_report %}{{ s.term_report.completes_daily_work }}{% else %}2{% endif %}"
+                        data-completes-homework="{% if s.term_report %}{{ s.term_report.completes_homework }}{% else %}2{% endif %}"
+                        data-is-courteous="{% if s.term_report %}{{ s.term_report.is_courteous }}{% else %}2{% endif %}"
+                        data-gets-along="{% if s.term_report %}{{ s.term_report.gets_along_with_others }}{% else %}2{% endif %}"
+                        data-self-control="{% if s.term_report %}{{ s.term_report.exhibits_self_control }}{% else %}2{% endif %}"
+                        data-no-disturb="{% if s.term_report %}{{ s.term_report.does_not_disturb_others }}{% else %}2{% endif %}"
+                        data-respect="{% if s.term_report %}{{ s.term_report.shows_respect }}{% else %}2{% endif %}"
+                        data-correction="{% if s.term_report %}{{ s.term_report.responds_to_correction }}{% else %}2{% endif %}"
+                        data-comment="{% if s.term_report %}{{ s.term_report.teacher_comment }}{% else %}{% endif %}"
+                        data-promotion="{% if s.term_report %}{{ s.term_report.promotion_status }}{% else %}pending{% endif %}">
+                  <i class="bi bi-pencil-square me-1"></i>
+                  {% if s.term_report %}Edit{% else %}Fill{% endif %}
+                </button>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% elif selected_class %}
+    <div class="card border-0 shadow-sm">
+      <div class="card-body text-center py-5 text-muted">
+        <i class="bi bi-people fs-2 d-block mb-2"></i>No active students in this class.
+      </div>
+    </div>
+    {% else %}
+    <div class="card border-0 shadow-sm">
+      <div class="card-body text-center py-5 text-muted">
+        <i class="bi bi-file-person fs-2 d-block mb-2"></i>
+        Select a class in the <strong>Grade Entry</strong> tab first.
+      </div>
+    </div>
+    {% endif %}
+  </div>{# /tab-reports #}
+
+
+  {# ══════════════════════════════════════════════════════ #}
+  {# TAB 3 — NOTICES                                       #}
+  {# ══════════════════════════════════════════════════════ #}
+  <div class="tab-pane fade" id="tab-notices">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white border-0 pt-3 pb-2">
+        <h6 class="fw-bold mb-0"><i class="bi bi-megaphone me-2"></i>Staff Notice Board</h6>
+      </div>
+      <div class="card-body p-0">
+        {% for notice in notices %}
+        <div class="px-4 py-3 border-bottom">
+          <div class="d-flex justify-content-between align-items-start">
+            <h6 class="fw-bold mb-1 text-dark">{{ notice.title }}</h6>
+            <small class="text-muted ms-3 flex-shrink-0">{{ notice.created_at|date:"M d, Y" }}</small>
+          </div>
+          <p class="text-secondary small mb-1">{{ notice.content }}</p>
+          <small class="text-muted">By {{ notice.author.get_full_name }}</small>
+        </div>
+        {% empty %}
+        <div class="text-center py-5 text-muted">
+          <i class="bi bi-megaphone fs-3 d-block mb-2"></i>No active announcements.
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+</div>{# /tab-content #}
+
+
+{# ═══════════════════════════════════════════════════════════ #}
+{# TERM REPORT MODAL                                          #}
+{# ═══════════════════════════════════════════════════════════ #}
+
+
+{% endblock %}
+
+
+{% block extra_js %}
+
+{# ═══════════════════════════════════════════════════════════ #}
+{# TERM REPORT MODAL                                          #}
+{# ═══════════════════════════════════════════════════════════ #}
+
+{# ═══════════════════════════════════════════════════════════ #}
+{# TERM REPORT MODAL                                          #}
+{# ═══════════════════════════════════════════════════════════ #}
+
+{# ═══════════════════════════════════════════════════════════ #}
+{# TERM REPORT MODAL                                          #}
+{# ═══════════════════════════════════════════════════════════ #}
+
+<div class="modal fade" id="termReportModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable" style="max-height: 90vh; margin: 1rem auto;">
+    <div class="modal-content border-0 shadow" style="max-height: 90vh; display: flex; flex-direction: column;">
+
+      <div class="modal-header border-0 pb-0" style="background:linear-gradient(135deg,var(--school-primary),var(--school-secondary)); flex-shrink: 0;">
+        <div>
+          <h5 class="modal-title text-white fw-bold mb-0">
+            <i class="bi bi-file-person me-2"></i>Term Report
+          </h5>
+          <small class="text-white opacity-75" id="modalStudentSubtitle"></small>
+        </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+
+      <form id="termReportForm" style="display: flex; flex-direction: column; height: 100%; flex: 1;">
+        {% csrf_token %}
+        <input type="hidden" id="tr_student_id" name="student_id">
+        <input type="hidden" id="tr_session_id" name="session_id">
+        <input type="hidden" id="tr_term_id"    name="term_id">
+
+        <div class="modal-body" style="overflow-y: auto !important; flex: 1 1 auto; padding-bottom: 0;">
+          
+          {# ── Attendance ── #}
+          <span class="section-pill"><i class="bi bi-calendar-check me-1"></i>Attendance</span>
+          <div class="row g-3 mb-4">
+            <div class="col-sm-6">
+              <label class="form-label small fw-semibold">Days Late</label>
+              <input type="number" class="form-control" id="tr_days_late" name="days_late" min="0" value="0">
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label small fw-semibold">Days Absent</label>
+              <input type="number" class="form-control" id="tr_days_absent" name="days_absent" min="0" value="0">
+            </div>
+          </div>
+
+          {# ── Traits ── #}
+          <div class="row g-4 mb-4">
+
+            {# Work Habits #}
+            <div class="col-md-6">
+              <span class="section-pill"><i class="bi bi-briefcase me-1"></i>Work Habits</span>
+              <div class="d-flex flex-column gap-2">
+
+                <div class="d-flex align-items-center justify-content-between gap-2">
+                  <label class="small flex-grow-1">Follows directions</label>
+                  <select class="trait-select" name="follows_directions" id="tr_follows" style="width:180px;">
+                    <option value="1">1 — Excellent</option>
+                    <option value="2">2 — Good</option>
+                    <option value="3">3 — Fair</option>
+                    <option value="4">4 — Needs Improvement</option>
+                    <option value="5">5 — Unsatisfactory</option>
+                  </select>
+                </div>
+                <div class="d-flex align-items-center justify-content-between gap-2">
+                  <label class="small flex-grow-1">Works independently</label>
+                  <select class="trait-select" name="works_independently" id="tr_works_ind" style="width:180px;">
+                    <option value="1">1 — Excellent</option><option value="2">2 — Good</option><option value="3">3 — Fair</option><option value="4">4 — Needs Improvement</option><option value="5">5 — Unsatisfactory</option>
+                  </select>
+                </div>
+                <div class="d-flex align-items-center justify-content-between gap-2">
+                  <label class="small flex-grow-1">Attentive in class</label>
+                  <select class="trait-select" name="attentive_in_class" id="tr_attentive" style="width:180px;">
+                    <option value="1">1 — Excellent</option><option value="2">2 — Good</option><option value="3">3 — Fair</option><option value="4">4 — Needs Improvement</option><option value="5">5 — Unsatisfactory</option>
+                  </select>
+                </div>
+                <div class="d-flex align-items-center justify-content-between gap-2">
+                  <label class="small flex-grow-1">Does work neatly</label>
+                  <select class="trait-select" name="does_work_neatly" id="tr_neat" style="width:180px;">
+                    <option value="1">1 — Excellent</option><option value="2">2 — Good</option><option value="3">3 — Fair</option><option value="4">4 — Needs Improvement</option><option value="5">5 — Unsatisfactory</option>
+                  </select>
+                </div>
+                <div class="d-flex align-items-center justify-content-between gap-2">
+                  <label class="small flex-grow-1">Completes daily work</label>
+                  <select class="trait-select" name="completes_daily_work" id="tr_daily" style="width:180px;">
+                    <option value="1">1 — Excellent</option><option value="2">2 — Good</option><option value="3">3 — Fair</option><option value="4">4 — Needs Improvement</option><option value="5">5 — Unsatisfactory</option>
+                  </select>
+                </div>
+                <div class="d-flex align-items-center justify-content-between gap-2">
+                  <label class="small flex-grow-1">Completes homework</label>
+                  <select class="trait-select" name="completes_homework" id="tr_hw" style="width:180px;">
+                    <option value="1">1 — Excellent</option><option value="2">2 — Good</option><option value="3">3 — Fair</option><option value="4">4 — Needs Improvement</option><option value="5">5 — Unsatisfactory</option>
+                  </select>
+                </div>
+
+              </div>
+            </div>
+
+            {# Social Habits #}
+            <div class="col-md-6">
+              <span class="section-pill"><i class="bi bi-people me-1"></i>Social Habits</span>
+              <div class="d-flex flex-column gap-2">
+
+                <div class="d-flex align-items-center justify-content-between gap-2">
+                  <label class="small flex-grow-1">Is courteous</label>
+                  <select class="trait-select" name="is_courteous" id="tr_courteous" style="width:180px;">
+                    <option value="1">1 — Excellent</option><option value="2">2 — Good</option><option value="3">3 — Fair</option><option value="4">4 — Needs Improvement</option><option value="5">5 — Unsatisfactory</option>
+                  </select>
+                </div>
+                <div class="d-flex align-items-center justify-content-between gap-2">
+                  <label class="small flex-grow-1">Gets along with others</label>
+                  <select class="trait-select" name="gets_along_with_others" id="tr_along" style="width:180px;">
+                    <option value="1">1 — Excellent</option><option value="2">2 — Good</option><option value="3">3 — Fair</option><option value="4">4 — Needs Improvement</option><option value="5">5 — Unsatisfactory</option>
+                  </select>
+                </div>
+                <div class="d-flex align-items-center justify-content-between gap-2">
+                  <label class="small flex-grow-1">Exhibits self-control</label>
+                  <select class="trait-select" name="exhibits_self_control" id="tr_selfctrl" style="width:180px;">
+                    <option value="1">1 — Excellent</option><option value="2">2 — Good</option><option value="3">3 — Fair</option><option value="4">4 — Needs Improvement</option><option value="5">5 — Unsatisfactory</option>
+                  </select>
+                </div>
+                <div class="d-flex align-items-center justify-content-between gap-2">
+                  <label class="small flex-grow-1">Does not disturb others</label>
+                  <select class="trait-select" name="does_not_disturb_others" id="tr_disturb" style="width:180px;">
+                    <option value="1">1 — Excellent</option><option value="2">2 — Good</option><option value="3">3 — Fair</option><option value="4">4 — Needs Improvement</option><option value="5">5 — Unsatisfactory</option>
+                  </select>
+                </div>
+                <div class="d-flex align-items-center justify-content-between gap-2">
+                  <label class="small flex-grow-1">Shows respect for authority</label>
+                  <select class="trait-select" name="shows_respect" id="tr_respect" style="width:180px;">
+                    <option value="1">1 — Excellent</option><option value="2">2 — Good</option><option value="3">3 — Fair</option><option value="4">4 — Needs Improvement</option><option value="5">5 — Unsatisfactory</option>
+                  </select>
+                </div>
+                <div class="d-flex align-items-center justify-content-between gap-2">
+                  <label class="small flex-grow-1">Responds well to correction</label>
+                  <select class="trait-select" name="responds_to_correction" id="tr_correction" style="width:180px;">
+                    <option value="1">1 — Excellent</option><option value="2">2 — Good</option><option value="3">3 — Fair</option><option value="4">4 — Needs Improvement</option><option value="5">5 — Unsatisfactory</option>
+                  </select>
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+          {# ── Teacher Comment ── #}
+          <span class="section-pill"><i class="bi bi-chat-square-text me-1"></i>Teacher's Comment</span>
+          <textarea class="form-control mb-4" name="teacher_comment" id="tr_comment"
+                    rows="3" placeholder="Write your comment about this student…"></textarea>
+
+          {# ── Promotion Status ── #}
+          <span class="section-pill"><i class="bi bi-award me-1"></i>Promotion Status</span>
+          <div class="d-flex flex-wrap gap-3 mb-2">
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="promotion_status" id="ps_promoted" value="promoted">
+              <label class="form-check-label fw-semibold text-success" for="ps_promoted">Promoted</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="promotion_status" id="ps_probation" value="probation">
+              <label class="form-check-label fw-semibold text-warning" for="ps_probation">Promoted on Probation</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="promotion_status" id="ps_not" value="not">
+              <label class="form-check-label fw-semibold text-danger" for="ps_not">Not Promoted</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="promotion_status" id="ps_pending" value="pending" checked>
+              <label class="form-check-label fw-semibold text-secondary" for="ps_pending">Pending</label>
+            </div>
+          </div>
+
+        </div>{# /modal-body #}
+
+        <div class="modal-footer border-0 d-flex justify-content-between" style="flex-shrink: 0; background: white; border-radius: 0 0 8px 8px;">
+          <div id="trSaveMsg" class="text-success fw-semibold small d-none">
+            <i class="bi bi-check-circle me-1"></i>Saved successfully!
+          </div>
+          <div class="d-flex gap-2 ms-auto">
+            <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-primary px-4" id="saveReportBtn">
+              <i class="bi bi-save me-1"></i>Save Report
+            </button>
+          </div>
+        </div>
+      </form>
+
+    </div>
+  </div>
+</div>
+<script>
+// ── Grades: live totals & grade letters ──────────────────
+function gradeInfo(total) {
+  if (total >= 90) return { letter: 'A', cls: 'gl-A', remark: 'Excellent' };
+  if (total >= 80) return { letter: 'B', cls: 'gl-B', remark: 'Good' };
+  if (total >= 70) return { letter: 'C', cls: 'gl-C', remark: 'Fair' };
+  if (total >= 60) return { letter: 'D', cls: 'gl-D', remark: 'Unsatisfactory' };
+  return { letter: 'F', cls: 'gl-F', remark: 'Failing' };
+}
+
+function refreshRow(row) {
+  const test = parseInt(row.querySelector('.test-inp').value) || 0;
+  const exam = parseInt(row.querySelector('.exam-inp').value) || 0;
+  const total = test + exam;
+  const sid = row.querySelector('[name^="test_"]').name.replace('test_', '');
+  const info = gradeInfo(total);
+  document.getElementById('tot_' + sid).textContent = total;
+  const badge = document.getElementById('gl_' + sid);
+  badge.textContent = info.letter;
+  badge.className = 'badge grade-badge ' + info.cls;
+  document.getElementById('rmk_' + sid).textContent = info.remark;
+}
+
+document.querySelectorAll('.grade-table tbody tr').forEach(row => {
+  if (row.querySelector('.test-inp')) {
+    refreshRow(row); // init on load
+    row.querySelector('.test-inp').addEventListener('input', () => refreshRow(row));
+    row.querySelector('.exam-inp').addEventListener('input', () => refreshRow(row));
+  }
+});
+
+// ── Term Report Modal ────────────────────────────────────
+function setSelect(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.value = String(val);
+}
+
+document.querySelectorAll('.open-report-modal').forEach(btn => {
+  btn.addEventListener('click', function () {
+    document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+    document.body.classList.remove('modal-open');
+    document.body.style.removeProperty('padding-right');
+    const d = this.dataset;
+
+    // Header
+    document.getElementById('modalStudentSubtitle').textContent =
+      d.studentName + ' — {% if selected_session %}{{ selected_session.name }}{% endif %} {% if selected_term %}{{ selected_term.name }}{% endif %}';
+
+    // Hidden fields
+    document.getElementById('tr_student_id').value = d.studentId;
+    document.getElementById('tr_session_id').value = d.sessionId;
+    document.getElementById('tr_term_id').value    = d.termId;
+
+    // Attendance
+    document.getElementById('tr_days_late').value   = d.daysLate;
+    document.getElementById('tr_days_absent').value = d.daysAbsent;
+
+    // Work habits
+    setSelect('tr_follows',   d.followsDirections);
+    setSelect('tr_works_ind', d.worksIndependently);
+    setSelect('tr_attentive', d.attentiveInClass);
+    setSelect('tr_neat',      d.doesWorkNeatly);
+    setSelect('tr_daily',     d.completesDailyWork);
+    setSelect('tr_hw',        d.completesHomework);
+
+    // Social habits
+    setSelect('tr_courteous', d.isCourteous);
+    setSelect('tr_along',     d.getsAlong);
+    setSelect('tr_selfctrl',  d.selfControl);
+    setSelect('tr_disturb',   d.noDisturb);
+    setSelect('tr_respect',   d.respect);
+    setSelect('tr_correction',d.correction);
+
+    // Comment & promotion
+    document.getElementById('tr_comment').value = d.comment;
+    const radio = document.querySelector(`input[name="promotion_status"][value="${d.promotion}"]`);
+    if (radio) radio.checked = true;
+
+    // Reset save msg
+    document.getElementById('trSaveMsg').classList.add('d-none');
+
+    new bootstrap.Modal(document.getElementById('termReportModal')).show();
+  });
+});
+
+// ── Save Term Report via AJAX ────────────────────────────
+document.getElementById('saveReportBtn').addEventListener('click', function () {
+  const form = document.getElementById('termReportForm');
+  const data = new FormData(form);
+  const btn  = this;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Saving…';
+
+  fetch('{% url "academics:save_term_report" 0 %}'.replace('/0/', '/' + document.getElementById('tr_student_id').value + '/'), {
+    method : 'POST',
+    headers: { 'X-CSRFToken': data.get('csrfmiddlewaretoken') },
+    body   : data,
+  })
+  .then(r => {
+    if (r.redirected || r.ok) {
+      document.getElementById('trSaveMsg').classList.remove('d-none');
+      btn.innerHTML = '<i class="bi bi-check me-1"></i>Saved';
+      btn.classList.replace('btn-primary', 'btn-success');
+      // Refresh page after 1s so row statuses update
+      setTimeout(() => {
+        const url = new URL(window.location.href);
+        url.hash = 'tab-reports';
+        window.location.href = url.href;
+      }, 1000);
+    } else {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-save me-1"></i>Save Report';
+      alert('Error saving report. Please try again.');
+    }
+  })
+  .catch(() => {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-save me-1"></i>Save Report';
+    alert('Network error. Please try again.');
+  });
+});
+
+// ── Restore active tab on reload (for hash) ──────────────
+// ── Restore active tab on reload ─────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+  document.body.classList.remove('modal-open');
+  document.body.style.removeProperty('padding-right');
+
+  const hash = window.location.hash;
+  if (hash === '#tab-reports') {
+    const btn = document.querySelector('[data-bs-target="#tab-reports"]');
+    if (btn) {
+      // Small delay to let Bootstrap fully init
+      setTimeout(() => new bootstrap.Tab(btn).show(), 100);
+    }
+  }
+});
+</script>
+{% endblock %}
