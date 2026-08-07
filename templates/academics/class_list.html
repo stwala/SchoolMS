@@ -55,6 +55,7 @@
         display:flex;
         align-items:center;
         gap:.5rem;
+        white-space: nowrap;
     }
 
     .class-name i{
@@ -116,6 +117,23 @@
     font-weight:600;
     margin-bottom:.35rem;
 }
+
+.subject-checkboxes {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+}
+
+.subject-checkboxes div {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.subject-checkboxes input {
+    width: 16px;
+    height: 16px;
+}
 </style>
 <div class="row">
   <!-- Create form -->
@@ -142,8 +160,11 @@
 
         <div class="alert alert-light border mb-4">
             <i class="bi bi-lightbulb text-warning me-2"></i>
-            Enter a unique class name (for example, <strong>Grade 7A</strong>,
-            <strong>Grade 10</strong>, or <strong>Reception</strong>).
+
+            Define the class structure using the class name, level, and stream.
+            Example:
+            <strong>Grade 7 - Stream A</strong>,
+            <strong>Form 2 - Science</strong>.
         </div>
 
         <form method="post" action="{% url 'academics:class_create' %}">
@@ -175,9 +196,21 @@
             <tr id="class-row-{{ c.pk }}">
               <td>
     <div class="class-name">
-        <i class="bi bi-mortarboard-fill"></i>
-        {{ c.name }}
-    </div>
+    <i class="bi bi-mortarboard-fill"></i>
+
+    <div>
+     <span class="fw-semibold">
+            {{c}}
+        </span>
+
+        <br>
+
+        <small class="text-muted">
+            {{ c.get_education_level_display }}
+        </small>
+</div>
+
+</div>
 </td>
               <td class="subjects-cell">
     {% if c.subjects.exists %}

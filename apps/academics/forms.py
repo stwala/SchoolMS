@@ -50,9 +50,13 @@ class SubjectForm(forms.ModelForm):
 class StudentClassForm(forms.ModelForm):
     class Meta:
         model = StudentClass
-        fields = ['name', 'subjects']
+        fields = ['name', 'grade_level','stream','education_level','subjects']
         widgets = {
-            'subjects': forms.CheckboxSelectMultiple(),
+            'name':forms.TextInput(attrs={'placeholder': 'e.g. Grade,Standard'}),
+            'grade_level': forms.NumberInput(attrs={'placeholder': 'e.g. 10'}),
+            'stream': forms.TextInput(attrs={'placeholder': 'e.g. A'}),
+            'education_level': forms.Select(attrs={'placeholder': 'e.g. primary, junior, secondary'}),
+            'subjects': forms.CheckboxSelectMultiple(attrs={'class': 'subject-checkboxes'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -60,6 +64,9 @@ class StudentClassForm(forms.ModelForm):
         self.helper = FormHelper()
         self.helper.layout = Layout(
             'name',
+            'grade_level',
+            'stream',
+            'education_level',
             'subjects',
             Submit('submit', 'Save Class', css_class='btn btn-primary btn-sm mt-2')
         )

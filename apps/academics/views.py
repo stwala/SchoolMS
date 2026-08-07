@@ -5,7 +5,7 @@ from django.http import JsonResponse
 from apps.accounts.decorators import admin_required, teacher_required
 from .models import AcademicSession, AcademicTerm, Subject, StudentClass, Grade
 from .forms import AcademicSessionForm, AcademicTermForm, SubjectForm, StudentClassForm
-from apps.people.models import Student
+from apps.people.models import Student, Teacher
 
 # ── Academic Sessions ─────────────────────────────────────
 @login_required
@@ -528,3 +528,98 @@ def save_term_report(request, student_id):
         'form': form, 'student': student,
         'active_session': active_session, 'active_term': active_term,
     })
+
+from .services.ranking import rank_students
+
+
+@login_required
+@teacher_required
+def class_rankings(request):
+
+    if request.user.is_admin:
+        classes = StudentClass.objects.all()
+    else:
+        teacher = get_object_or_404(
+            Teacher,
+            user=request.user
+        )
+        classes = teacher.assigned_classes.all()
+
+
+    sessions = AcademicSession.objects.all()
+    terms = AcademicTerm.objects.all()
+
+
+    selected_class_id = request.GET.get('student_class')
+    selected_session_id = request.GET.get('session')
+    selected_term_id = request.GET.get('term')
+
+
+    # default active values
+    if not selected_session_id:
+        active_session = AcademicSession.objects.filter(
+            current=True
+        ).first()
+
+        if active_session:
+            selected_session_id = active_session.pk
+
+
+    if not selected_term_id:
+        active_term = AcademicTerm.objects.filter(
+            current=True
+        ).first()
+
+        if active_term:
+            selected_term_id = active_term.pk
+
+
+
+    selected_class = None
+    rankings = []
+
+
+    if selected_class_id and selected_session_id and selected_term_id:
+
+        selected_class = get_object_or_404(
+            classes,
+            pk=selected_class_id
+        )
+
+
+        session = get_object_or_404(
+            AcademicSession,
+            pk=selected_session_id
+        )
+
+
+        term = get_object_or_404(
+            AcademicTerm,
+            pk=selected_term_id
+        )
+
+
+        rankings = rank_students(
+            selected_class,
+            session,
+            term
+        )
+
+
+    return render(
+        request,
+        "academics/ranking.html",
+        {
+            "classes": classes,
+            "sessions": sessions,
+            "terms": terms,
+
+            "selected_class": selected_class,
+            "selected_class_id": str(selected_class_id),
+
+            "selected_session_id": str(selected_session_id),
+            "selected_term_id": str(selected_term_id),
+
+            "rankings": rankings,
+        }
+    )

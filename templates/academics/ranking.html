@@ -1,0 +1,246 @@
+{% extends 'base.html' %}
+{% block title %}Class Rankings{% endblock %}
+
+{% block content %}
+
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-header bg-white border-0 pt-4 pb-2">
+        <h5 class="fw-bold mb-0">Class Ranking Filters</h5>
+    </div>
+
+    <div class="card-body">
+      <form method="get" id="rankingFilterForm" class="row g-3">
+
+    <div class="col-md-4">
+        <label class="form-label small fw-semibold">Class</label>
+
+        <select name="student_class" 
+                id="student_class"
+                class="form-select"
+                onchange="document.getElementById('rankingFilterForm').submit();">
+
+            <option value="">-- Select Class --</option>
+
+            {% for c in classes %}
+            <option value="{{ c.pk }}"
+                {% if selected_class_id == c.pk|stringformat:"s" %}selected{% endif %}>
+                {{ c }}
+            </option>
+            {% endfor %}
+
+        </select>
+    </div>
+
+
+    <div class="col-md-4">
+        <label class="form-label small fw-semibold">
+            Academic Session
+        </label>
+
+        <select name="session" 
+                id="session"
+                class="form-select"
+                onchange="document.getElementById('rankingFilterForm').submit();">
+
+            <option value="">-- Select Session --</option>
+
+            {% for s in sessions %}
+            <option value="{{ s.pk }}"
+                {% if selected_session_id == s.pk|stringformat:"s" %}selected{% endif %}>
+                {{ s.name }}
+                {% if s.current %}(Active){% endif %}
+            </option>
+            {% endfor %}
+
+        </select>
+    </div>
+
+
+    <div class="col-md-4">
+        <label class="form-label small fw-semibold">
+            Academic Term
+        </label>
+
+        <select name="term" 
+                id="term"
+                class="form-select"
+                onchange="document.getElementById('rankingFilterForm').submit();">
+
+            <option value="">-- Select Term --</option>
+
+            {% for t in terms %}
+            <option value="{{ t.pk }}"
+                {% if selected_term_id == t.pk|stringformat:"s" %}selected{% endif %}>
+                {{ t.name }}
+                {% if t.current %}(Active){% endif %}
+            </option>
+            {% endfor %}
+
+        </select>
+    </div>
+
+</form>
+    </div>
+</div>
+
+
+{% if rankings %}
+
+<div class="card shadow-sm border-0">
+
+    <div class="card-header bg-white border-0 pt-4 pb-2 d-flex justify-content-between align-items-center">
+
+        <div>
+            <h5 class="fw-bold mb-0">
+                {{ selected_class }}
+            </h5>
+
+            <small class="text-muted">
+                {{ selected_term }} • {{ selected_session }}
+            </small>
+        </div>
+
+        <div class="d-flex gap-2">
+
+            <button class="btn btn-outline-success btn-sm">
+                <i class="bi bi-file-earmark-excel me-1"></i>
+                Export Excel
+            </button>
+
+            <button class="btn btn-outline-danger btn-sm">
+                <i class="bi bi-file-earmark-pdf me-1"></i>
+                Export PDF
+            </button>
+
+        </div>
+
+    </div>
+
+    <div class="table-responsive">
+
+        <table class="table table-hover align-middle mb-0">
+
+            <thead class="table-light">
+
+                <tr>
+
+                    <th style="width:90px;">Position</th>
+
+                    <th>Admission No</th>
+
+                    <th>Student</th>
+
+                    <th class="text-center">
+                        {% if selected_class.ranking_method == "marks" %}
+                            Total Marks
+                        {% else %}
+                            Total Points
+                        {% endif %}
+                    </th>
+
+                    <th class="text-center">Average</th>
+
+                    <th class="text-center">Grade</th>
+
+                    <th>Remarks</th>
+
+                </tr>
+
+            </thead>
+
+            <tbody>
+
+                {% for row in rankings %}
+
+                <tr>
+
+                    <td>
+
+                        {% if row.position == 1 %}
+                            🥇 1
+                        {% elif row.position == 2 %}
+                            🥈 2
+                        {% elif row.position == 3 %}
+                            🥉 3
+                        {% else %}
+                            {{ row.position }}
+                        {% endif %}
+
+                    </td>
+
+                    <td>
+                        <code>{{ row.student.admission_no }}</code>
+                    </td>
+
+                    <td class="fw-semibold">
+                        {{ row.student.user.get_full_name }}
+                    </td>
+
+                    <td class="text-center fw-bold">
+
+                        {% if selected_class.ranking_method == "marks" %}
+                            {{ row.total_marks }}
+                        {% else %}
+                            {{ row.total_points }}
+                        {% endif %}
+
+                    </td>
+
+                    <td class="text-center">
+                        {{ row.average|floatformat:1 }}%
+                    </td>
+
+                    <td class="text-center">
+
+                        <span class="badge bg-primary">
+
+                            {{ row.grade }}
+
+                        </span>
+
+                    </td>
+
+                    <td>
+
+                        {{ row.remark }}
+
+                    </td>
+
+                </tr>
+
+                {% empty %}
+
+                <tr>
+
+                    <td colspan="7" class="text-center text-muted py-5">
+
+                        No rankings available.
+
+                    </td>
+
+                </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+{% endif %}
+
+{% endblock %}
+{% block extra_js %}
+<script>
+// Helper context-like template filter simulation
+$(document).ready(function() {
+  $('#session, #term').change(function() {
+    if ($('#student_class').val() && $('#subject').val()) {
+      $('#filterForm').submit();
+    }
+  });
+</script>
+{% endblock %}  

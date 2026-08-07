@@ -32,6 +32,6 @@ urlpatterns = [
     path('grades/',                        views.grade_entry,           name='grade_entry'),
     path('grades/save-student/',           views.save_student_grades,   name='save_student_grades'),
     path('report-card/<int:student_id>/',  views.student_report_card,   name='student_report_card'),
-
+    path("rankings/", views.class_rankings,  name="class_rankings"),    
     path('students/<int:student_id>/term-report/', views.save_term_report, name='save_term_report'),
 ]

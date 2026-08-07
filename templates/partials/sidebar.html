@@ -135,6 +135,11 @@
       </a>
     </li>
     <li class="nav-item">
+      <a class="nav-link d-flex align-items-center {% if '/academics/rankings/' in request.path %}active text-white bg-primary{% else %}text-dark{% endif %}" href="{% url 'academics:class_rankings' %}">
+        <i class="bi bi-bar-chart-line me-2"></i> Class Ranking
+      </a>
+    </li>
+    <li class="nav-item">
       <a class="nav-link d-flex align-items-center {% if '/people/students/' in request.path %}active text-white bg-primary{% else %}text-dark{% endif %}" href="{% url 'people:student_list' %}">
         <i class="bi bi-mortarboard me-2"></i> Students Directory
       </a>

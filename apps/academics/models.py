@@ -37,9 +37,23 @@ class Subject(models.Model):
 
 
 class StudentClass(models.Model):
+    LEVEL_CHOICES = [
+        ('primary', "Primary"),
+        ('junior', "Junior Secondary"),
+        ('secondary', "Senior Secondary"),
+    ]
+
+    # RANKING_METHODS =[
+    #     ('marks',"Total Marks"),
+    #     ('points',"Points"),
+    # ]
     """Class or Room (e.g. Grade 10-A, JSS 1)"""
-    name = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=20, unique=True)
+    grade_level = models.PositiveSmallIntegerField()
+    stream = models.CharField(max_length=50, blank=True, null=True)
+    education_level = models.CharField(max_length=20, choices=LEVEL_CHOICES, default='primary')
     subjects = models.ManyToManyField(Subject, related_name='classes', blank=True)
+    # ranking_method = models.CharField(max_length=20, choices=RANKING_METHODS, default='marks')
 
     class Meta:
         verbose_name = "Class"
@@ -47,7 +61,11 @@ class StudentClass(models.Model):
         ordering = ['name']
 
     def __str__(self):
-        return self.name
+        return f"{self.name} {self.grade_level}{self.stream or ''}"
+
+    @property
+    def ranking_method(self):
+        return 'marks' if self.grade_level <= 9 else 'points'
 
 
 class Grade(models.Model):
