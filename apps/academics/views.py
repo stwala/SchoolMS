@@ -6,6 +6,8 @@ from apps.accounts.decorators import admin_required, teacher_required
 from .models import AcademicSession, AcademicTerm, Subject, StudentClass, Grade
 from .forms import AcademicSessionForm, AcademicTermForm, SubjectForm, StudentClassForm
 from apps.people.models import Student, Teacher
+from openpyxl import Workbook
+from django.http import HttpResponse
 
 # ── Academic Sessions ─────────────────────────────────────
 @login_required
@@ -623,3 +625,327 @@ def class_rankings(request):
             "rankings": rankings,
         }
     )
+
+@login_required
+@teacher_required
+def export_ranking_excel(request):
+
+    if request.user.is_admin:
+        classes = StudentClass.objects.all()
+    else:
+        teacher = get_object_or_404(
+            Teacher,
+            user=request.user
+        )
+        classes = teacher.assigned_classes.all()
+
+    class_id = request.GET.get("student_class")
+    session_id = request.GET.get("session")
+    term_id = request.GET.get("term")
+
+    student_class = get_object_or_404(
+        classes,
+        pk=class_id
+    )
+
+    session = get_object_or_404(
+        AcademicSession,
+        pk=session_id
+    )
+
+    term = get_object_or_404(
+        AcademicTerm,
+        pk=term_id
+    )
+
+    rankings = rank_students(
+        student_class,
+        session,
+        term
+    )
+
+    workbook = Workbook()
+    worksheet = workbook.active
+    worksheet.title = "Class Ranking"
+
+    # Title
+    worksheet.append([
+        f"{student_class} - Class Ranking"
+    ])
+
+    worksheet.append([
+        f"{term.name} - {session.name}"
+    ])
+
+    worksheet.append([])
+
+    # Headers
+    worksheet.append([
+        "Position",
+        "Admission No",
+        "Student",
+        "Total/Points",
+        "Average",
+        "Grade",
+        "Remarks",
+    ])
+
+    # Data
+    for row in rankings:
+
+        if student_class.ranking_method == "marks":
+            total = row["total_marks"]
+        else:
+            total = row["total_points"]
+
+        worksheet.append([
+            row["position"],
+            row["student"].admission_no,
+            row["student"].user.get_full_name(),
+            total,
+            round(row["average"], 1),
+            row["grade"],
+            row["remark"],
+        ])
+
+    # Column widths
+    widths = {
+        "A": 12,
+        "B": 18,
+        "C": 30,
+        "D": 18,
+        "E": 15,
+        "F": 12,
+        "G": 25,
+    }
+
+    for column, width in widths.items():
+        worksheet.column_dimensions[column].width = width
+
+    response = HttpResponse(
+        content_type=(
+            "application/vnd.openxmlformats-officedocument."
+            "spreadsheetml.sheet"
+        )
+    )
+
+    filename = (
+        f"{student_class.name}_ranking_"
+        f"{term.name}_{session.name}.xlsx"
+    )
+
+    response["Content-Disposition"] = (
+        f'attachment; filename="{filename}"'
+    )
+
+    workbook.save(response)
+
+    return response
+
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4, landscape
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.units import mm
+from reportlab.platypus import (SimpleDocTemplate,Table,TableStyle, Paragraph,Spacer,)
+
+@login_required
+@teacher_required
+def export_ranking_pdf(request):
+
+    if request.user.is_admin:
+        classes = StudentClass.objects.all()
+    else:
+        teacher = get_object_or_404(Teacher,user=request.user)
+        classes = teacher.assigned_classes.all()
+
+    class_id = request.GET.get("student_class")
+    session_id = request.GET.get("session")
+    term_id = request.GET.get("term")
+
+    student_class = get_object_or_404(
+        classes,
+        pk=class_id
+    )
+
+    session = get_object_or_404(
+        AcademicSession,
+        pk=session_id
+    )
+
+    term = get_object_or_404(
+        AcademicTerm,
+        pk=term_id
+    )
+
+    rankings = rank_students(
+        student_class,
+        session,
+        term
+    )
+
+    response = HttpResponse(
+        content_type="application/pdf"
+    )
+
+    filename = (
+        f"{student_class.name}_ranking_"
+        f"{term.name}_{session.name}.pdf"
+    )
+
+    response["Content-Disposition"] = (
+        f'attachment; filename="{filename}"'
+    )
+
+    document = SimpleDocTemplate(
+        response,
+        pagesize=landscape(A4),
+        rightMargin=12 * mm,
+        leftMargin=12 * mm,
+        topMargin=12 * mm,
+        bottomMargin=12 * mm,
+    )
+
+    styles = getSampleStyleSheet()
+
+    elements = []
+
+    elements.append(
+        Paragraph(
+            f"<b>{student_class}</b>",
+            styles["Title"]
+        )
+    )
+
+    elements.append(
+        Paragraph(
+            f"{term.name} • {session.name}",
+            styles["Heading3"]
+        )
+    )
+
+    elements.append(Spacer(1, 8 * mm))
+
+    total_label = (
+        "Total Marks"
+        if student_class.ranking_method == "marks"
+        else "Total Points"
+    )
+
+    data = [
+        [
+            "Pos",
+            "Adm No",
+            "Student",
+            total_label,
+            "Average",
+            "Grade",
+            "Remarks",
+        ]
+    ]
+
+    for row in rankings:
+
+        total = (
+            row["total_marks"]
+            if student_class.ranking_method == "marks"
+            else row["total_points"]
+        )
+
+        data.append([
+            row["position"],
+            row["student"].admission_no,
+            row["student"].user.get_full_name(),
+            total,
+            f"{row['average']:.1f}%",
+            row["grade"],
+            row["remark"],
+        ])
+
+    table = Table(
+        data,
+        repeatRows=1,
+        colWidths=[
+            18 * mm,
+            30 * mm,
+            55 * mm,
+            30 * mm,
+            25 * mm,
+            20 * mm,
+            45 * mm,
+        ]
+    )
+
+    table.setStyle(
+        TableStyle([
+            (
+                "BACKGROUND",
+                (0, 0),
+                (-1, 0),
+                colors.HexColor("#f1f5f9")
+            ),
+            (
+                "TEXTCOLOR",
+                (0, 0),
+                (-1, 0),
+                colors.black
+            ),
+            (
+                "FONTNAME",
+                (0, 0),
+                (-1, 0),
+                "Helvetica-Bold"
+            ),
+            (
+                "ALIGN",
+                (0, 0),
+                (0, -1),
+                "CENTER"
+            ),
+            (
+                "ALIGN",
+                (3, 1),
+                (5, -1),
+                "CENTER"
+            ),
+            (
+                "GRID",
+                (0, 0),
+                (-1, -1),
+                0.5,
+                colors.HexColor("#d1d5db")
+            ),
+            (
+                "ROWBACKGROUNDS",
+                (0, 1),
+                (-1, -1),
+                [
+                    colors.white,
+                    colors.HexColor("#f8fafc")
+                ]
+            ),
+            (
+                "VALIGN",
+                (0, 0),
+                (-1, -1),
+                "MIDDLE"
+            ),
+            (
+                "TOPPADDING",
+                (0, 0),
+                (-1, -1),
+                7
+            ),
+            (
+                "BOTTOMPADDING",
+                (0, 0),
+                (-1, -1),
+                7
+            ),
+        ])
+    )
+
+    elements.append(table)
+
+    document.build(elements)
+
+    return response
