@@ -1,3 +1,5 @@
+
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -8,6 +10,11 @@ from .forms import AcademicSessionForm, AcademicTermForm, SubjectForm, StudentCl
 from apps.people.models import Student, Teacher
 from openpyxl import Workbook
 from django.http import HttpResponse
+from openpyxl.drawing.image import Image
+from apps.dashboard.models import SchoolSettings
+from openpyxl import Workbook
+from openpyxl.styles import Font
+
 
 # ── Academic Sessions ─────────────────────────────────────
 @login_required
@@ -664,22 +671,52 @@ def export_ranking_excel(request):
         term
     )
 
+    # Get school settings
+    school_settings = SchoolSettings.get()
+
+    # Create workbook FIRST
     workbook = Workbook()
     worksheet = workbook.active
     worksheet.title = "Class Ranking"
 
-    # Title
-    worksheet.append([
-        f"{student_class} - Class Ranking"
-    ])
+    # --------------------------------------------------
+    # SCHOOL LOGO
+    # --------------------------------------------------
 
-    worksheet.append([
-        f"{term.name} - {session.name}"
-    ])
+    if school_settings.logo:
+        logo = Image(school_settings.logo.path)
+        logo.width = 120
+        logo.height = 60
+        worksheet.add_image(logo, "A1")
 
-    worksheet.append([])
+    # --------------------------------------------------
+    # SCHOOL INFORMATION
+    # --------------------------------------------------
 
-    # Headers
+    worksheet.merge_cells("C1:G1")
+
+    worksheet["C1"] = school_settings.school_name
+    worksheet["C1"].font = Font(
+        bold=True,
+        size=16
+    )
+
+    worksheet["C2"] = "Class Rankings"
+    worksheet["C2"].font = Font(
+        bold=True,
+        size=13
+    )
+
+    worksheet["C3"] = (
+        f"{student_class} • {term} • {session}"
+    )
+
+    # --------------------------------------------------
+    # HEADERS
+    # --------------------------------------------------
+
+    worksheet.append([])  # Row 4
+
     worksheet.append([
         "Position",
         "Admission No",
@@ -690,7 +727,10 @@ def export_ranking_excel(request):
         "Remarks",
     ])
 
-    # Data
+    # --------------------------------------------------
+    # DATA
+    # --------------------------------------------------
+
     for row in rankings:
 
         if student_class.ranking_method == "marks":
@@ -708,7 +748,10 @@ def export_ranking_excel(request):
             row["remark"],
         ])
 
-    # Column widths
+    # --------------------------------------------------
+    # COLUMN WIDTHS
+    # --------------------------------------------------
+
     widths = {
         "A": 12,
         "B": 18,
@@ -721,6 +764,10 @@ def export_ranking_excel(request):
 
     for column, width in widths.items():
         worksheet.column_dimensions[column].width = width
+
+    # --------------------------------------------------
+    # RESPONSE
+    # --------------------------------------------------
 
     response = HttpResponse(
         content_type=(
@@ -746,7 +793,14 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import mm
-from reportlab.platypus import (SimpleDocTemplate,Table,TableStyle, Paragraph,Spacer,)
+from reportlab.platypus import (
+    SimpleDocTemplate,
+    Table,
+    TableStyle,
+    Paragraph,
+    Spacer,
+    Image as ReportLabImage,
+)
 
 @login_required
 @teacher_required
@@ -755,7 +809,10 @@ def export_ranking_pdf(request):
     if request.user.is_admin:
         classes = StudentClass.objects.all()
     else:
-        teacher = get_object_or_404(Teacher,user=request.user)
+        teacher = get_object_or_404(
+            Teacher,
+            user=request.user
+        )
         classes = teacher.assigned_classes.all()
 
     class_id = request.GET.get("student_class")
@@ -783,6 +840,10 @@ def export_ranking_pdf(request):
         term
     )
 
+    # Get school settings
+    school_settings = SchoolSettings.get()
+
+    # PDF response
     response = HttpResponse(
         content_type="application/pdf"
     )
@@ -796,67 +857,92 @@ def export_ranking_pdf(request):
         f'attachment; filename="{filename}"'
     )
 
+    # PDF document
     document = SimpleDocTemplate(
         response,
         pagesize=landscape(A4),
-        rightMargin=12 * mm,
-        leftMargin=12 * mm,
-        topMargin=12 * mm,
-        bottomMargin=12 * mm,
+        rightMargin=30,
+        leftMargin=30,
+        topMargin=30,
+        bottomMargin=30,
     )
 
     styles = getSampleStyleSheet()
 
     elements = []
 
+    # --------------------------------------------------
+    # SCHOOL LOGO
+    # --------------------------------------------------
+
+    if school_settings.logo:
+        logo = ReportLabImage(
+            school_settings.logo.path,
+            width=80,
+            height=60
+        )
+
+        elements.append(logo)
+
+    # --------------------------------------------------
+    # SCHOOL INFORMATION
+    # --------------------------------------------------
+
     elements.append(
         Paragraph(
-            f"<b>{student_class}</b>",
+            f"<b>{school_settings.school_name}</b>",
             styles["Title"]
         )
     )
 
     elements.append(
         Paragraph(
-            f"{term.name} • {session.name}",
-            styles["Heading3"]
+            "<b>CLASS RANKING REPORT</b>",
+            styles["Heading2"]
         )
     )
 
-    elements.append(Spacer(1, 8 * mm))
-
-    total_label = (
-        "Total Marks"
-        if student_class.ranking_method == "marks"
-        else "Total Points"
+    elements.append(
+        Paragraph(
+            f"{student_class} • {term.name} • {session.name}",
+            styles["Normal"]
+        )
     )
 
-    data = [
-        [
-            "Pos",
-            "Adm No",
-            "Student",
-            total_label,
-            "Average",
-            "Grade",
-            "Remarks",
-        ]
-    ]
+    elements.append(
+        Paragraph(
+            "<br/>",
+            styles["Normal"]
+        )
+    )
+
+    # --------------------------------------------------
+    # RANKING TABLE
+    # --------------------------------------------------
+
+    data = [[
+        "Position",
+        "Admission No",
+        "Student",
+        "Total/Points",
+        "Average",
+        "Grade",
+        "Remarks",
+    ]]
 
     for row in rankings:
 
-        total = (
-            row["total_marks"]
-            if student_class.ranking_method == "marks"
-            else row["total_points"]
-        )
+        if student_class.ranking_method == "marks":
+            total = row["total_marks"]
+        else:
+            total = row["total_points"]
 
         data.append([
             row["position"],
             row["student"].admission_no,
             row["student"].user.get_full_name(),
             total,
-            f"{row['average']:.1f}%",
+            f"{row['average']:.1f}",
             row["grade"],
             row["remark"],
         ])
@@ -865,29 +951,24 @@ def export_ranking_pdf(request):
         data,
         repeatRows=1,
         colWidths=[
-            18 * mm,
-            30 * mm,
-            55 * mm,
-            30 * mm,
-            25 * mm,
-            20 * mm,
-            45 * mm,
+            65,
+            90,
+            170,
+            90,
+            75,
+            60,
+            130,
         ]
     )
 
     table.setStyle(
         TableStyle([
+            # Header
             (
                 "BACKGROUND",
                 (0, 0),
                 (-1, 0),
-                colors.HexColor("#f1f5f9")
-            ),
-            (
-                "TEXTCOLOR",
-                (0, 0),
-                (-1, 0),
-                colors.black
+                colors.lightgrey
             ),
             (
                 "FONTNAME",
@@ -895,39 +976,58 @@ def export_ranking_pdf(request):
                 (-1, 0),
                 "Helvetica-Bold"
             ),
-            (
-                "ALIGN",
-                (0, 0),
-                (0, -1),
-                "CENTER"
-            ),
-            (
-                "ALIGN",
-                (3, 1),
-                (5, -1),
-                "CENTER"
-            ),
+
+            # Grid
             (
                 "GRID",
                 (0, 0),
                 (-1, -1),
                 0.5,
-                colors.HexColor("#d1d5db")
+                colors.grey
             ),
+
+            # Alignment
             (
-                "ROWBACKGROUNDS",
-                (0, 1),
+                "ALIGN",
+                (0, 0),
                 (-1, -1),
-                [
-                    colors.white,
-                    colors.HexColor("#f8fafc")
-                ]
+                "CENTER"
             ),
             (
                 "VALIGN",
                 (0, 0),
                 (-1, -1),
                 "MIDDLE"
+            ),
+
+            # Student name left aligned
+            (
+                "ALIGN",
+                (2, 1),
+                (2, -1),
+                "LEFT"
+            ),
+
+            # Remarks left aligned
+            (
+                "ALIGN",
+                (6, 1),
+                (6, -1),
+                "LEFT"
+            ),
+
+            # Padding
+            (
+                "LEFTPADDING",
+                (0, 0),
+                (-1, -1),
+                6
+            ),
+            (
+                "RIGHTPADDING",
+                (0, 0),
+                (-1, -1),
+                6
             ),
             (
                 "TOPPADDING",
@@ -945,6 +1045,10 @@ def export_ranking_pdf(request):
     )
 
     elements.append(table)
+
+    # --------------------------------------------------
+    # BUILD PDF
+    # --------------------------------------------------
 
     document.build(elements)
 
