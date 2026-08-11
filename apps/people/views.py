@@ -9,6 +9,7 @@ from apps.accounts.decorators import admin_required, teacher_required
 from apps.academics.models import AcademicSession, AcademicTerm, Grade
 from .models import Student, Teacher, Parent
 from .forms import StudentForm, TeacherForm, ParentForm,StudentBulkUploadForm
+from apps.academics.models import StudentTermReport
 
 
 # ── Students ──────────────────────────────────────────────
@@ -91,6 +92,12 @@ def student_grades_json(request, pk):
         subj['letter'] = g.get('letter', 'F')
         subj['remark'] = g.get('remark', 'Fail')
 
+    term_report = None
+    if active_session and active_term:
+        term_report = StudentTermReport.objects.filter(
+            student=student, session=active_session, term=active_term
+        ).first()
+
     return JsonResponse({
         'student_id': student.pk,
         'student_name': student.user.get_full_name(),
@@ -101,6 +108,7 @@ def student_grades_json(request, pk):
         'session_id': active_session.pk if active_session else None,
         'term_id': active_term.pk if active_term else None,
         'subjects': subjects,
+        'teacher_comment': term_report.teacher_comment if term_report else '',
     })
 
 

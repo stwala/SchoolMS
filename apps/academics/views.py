@@ -336,6 +336,7 @@ def save_student_grades(request):
     student_id = request.POST.get('student_id')
     session_id = request.POST.get('session_id')
     term_id = request.POST.get('term_id')
+    teacher_comment = request.POST.get('teacher_comment', '').strip()
 
     student = get_object_or_404(Student, pk=student_id)
 
@@ -377,6 +378,16 @@ def save_student_grades(request):
         grade_obj.exam_score = exam_score
         grade_obj.save()
         saved_count += 1
+
+    StudentTermReport.objects.update_or_create(
+        student=student,
+        session=session,
+        term=term,
+        defaults={
+                'student_class': student.student_class,
+                'teacher_comment': teacher_comment,
+            }
+        )
 
     return JsonResponse({'status': 'ok', 'saved': saved_count, 'student': student.user.get_full_name()})
 
@@ -442,6 +453,12 @@ def student_report_card(request, student_id):
                 student_position = row['position']
                 break
 
+    term_report = None
+    if active_session and active_term:
+        term_report = StudentTermReport.objects.filter(
+            student=student, session=active_session, term=active_term
+        ).first()
+        
     context = {
         'student': student,
         'grades': grades,
@@ -453,6 +470,8 @@ def student_report_card(request, student_id):
         'student_position': student_position,
         'class_size': class_size,
         'student_class': student_class,
+
+        'term_report': term_report,
     }
 
     return render(request, 'academics/report_card.html', context)
