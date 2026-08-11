@@ -153,6 +153,7 @@ class StudentTermReport(models.Model):
 
     # Teacher comment
     teacher_comment = models.TextField(blank=True)
+    head_teacher_comment = models.TextField(blank=True)
 
     # Promotion (only meaningful on 3rd term)
     promotion_status = models.CharField(

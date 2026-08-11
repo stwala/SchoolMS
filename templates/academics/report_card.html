@@ -1,483 +1,265 @@
-{% extends 'base.html' %}
-{% load report_tags %}
-{% block title %}Report Card — {{ student.user.get_full_name }}{% endblock %}
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Report Card - {{ student.user.get_full_name }}</title>
+    <style>
+        @page { size: A4; margin: 1.5cm; }
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Georgia', 'Times New Roman', serif;
+            color: #1a1a1a;
+            margin: 0;
+            padding: 20px;
+            background: #fff;
+        }
+        .report-card {
+            max-width: 800px;
+            margin: 0 auto;
+            border: 2px solid #14213d;
+            padding: 30px;
+        }
+        .header {
+            text-align: center;
+            border-bottom: 3px double #14213d;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+        .header .school-logo {
+            max-height: 70px;
+            margin-bottom: 8px;
+        }
+        .header .school-name {
+            font-size: 24px;
+            font-weight: bold;
+            color: #14213d;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin: 0;
+        }
+        .header .school-address {
+            font-size: 12px;
+            color: #555;
+            margin: 4px 0 10px;
+        }
+        .header .report-title {
+            font-size: 16px;
+            font-weight: bold;
+            background: #14213d;
+            color: #fff;
+            display: inline-block;
+            padding: 4px 20px;
+            margin-top: 8px;
+            letter-spacing: 1px;
+        }
 
-{% block extra_css %}
-<style>
-  /* ── Report Card Brand Colors ── */
-  :root {
-    --rc-primary:   {{ school_settings.primary_color|default:'#5a67d8' }};
-    --rc-secondary: {{ school_settings.secondary_color|default:'#4c51bf' }};
-  }
+        .student-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px 30px;
+            margin-bottom: 20px;
+            font-size: 13px;
+        }
+        .student-info div span.label {
+            font-weight: bold;
+            color: #14213d;
+            display: inline-block;
+            min-width: 110px;
+        }
 
-  /* Header Banner */
-  .rc-header-banner {
-    background: linear-gradient(135deg, var(--rc-primary) 0%, var(--rc-secondary) 100%);
-    border-radius: 12px 12px 0 0;
-    padding: 28px 32px;
-    color: #fff;
-    position: relative;
-    overflow: hidden;
-  }
-  .rc-header-banner::before {
-    content: '';
-    position: absolute;
-    top: -40px; right: -40px;
-    width: 160px; height: 160px;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.06);
-  }
-  .rc-header-banner::after {
-    content: '';
-    position: absolute;
-    bottom: -50px; left: 30%;
-    width: 200px; height: 200px;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.04);
-  }
+        table.grades {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            font-size: 13px;
+        }
+        table.grades th {
+            background: #14213d;
+            color: #fff;
+            padding: 8px 6px;
+            text-align: left;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+        }
+        table.grades td {
+            padding: 7px 6px;
+            border-bottom: 1px solid #ddd;
+        }
+        table.grades tr:nth-child(even) { background: #f7f7f9; }
+        table.grades td.center, table.grades th.center { text-align: center; }
+        .grade-letter {
+            font-weight: bold;
+        }
+        .grade-A { color: #1b7a34; }
+        .grade-B { color: #2b6cb0; }
+        .grade-C { color: #b7791f; }
+        .grade-D { color: #c05621; }
+        .grade-F { color: #c0392b; }
 
-  .rc-logo-wrap {
-    width: 88px; height: 88px;
-    background: rgba(255,255,255,0.18);
-    border: 3px solid rgba(255,255,255,0.5);
-    border-radius: 16px;
-    display: flex; align-items: center; justify-content: center;
-    overflow: hidden;
-    backdrop-filter: blur(4px);
-    flex-shrink: 0;
-  }
-  .rc-logo-wrap img { width: 100%; height: 100%; object-fit: contain; padding: 4px; }
-  .rc-logo-wrap .rc-logo-placeholder {
-    font-size: 2.4rem; color: rgba(255,255,255,0.9);
-  }
+        .summary-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .summary-box {
+            border: 1px solid #14213d;
+            padding: 10px;
+            text-align: center;
+        }
+        .summary-box .value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #14213d;
+        }
+        .summary-box .label {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: #555;
+            letter-spacing: 0.5px;
+        }
 
-  .rc-school-name {
-    font-size: 1.45rem; font-weight: 800;
-    letter-spacing: 0.3px; margin-bottom: 2px;
-  }
-  .rc-school-sub { font-size: 0.82rem; opacity: 0.82; }
-  .rc-report-title {
-    font-size: 0.9rem; font-weight: 700;
-    background: rgba(255,255,255,0.2);
-    border-radius: 20px; padding: 4px 14px;
-    display: inline-block; letter-spacing: 0.5px;
-    text-transform: uppercase; margin-top: 8px;
-  }
-  .rc-contact-tag {
-    font-size: 0.75rem; opacity: 0.75;
-    display: block; line-height: 1.6;
-  }
+        .comment-section {
+            margin-bottom: 25px;
+            font-size: 13px;
+        }
+        .comment-section .comment-title {
+            font-weight: bold;
+            color: #14213d;
+            margin-bottom: 4px;
+        }
+        .comment-box {
+            border: 1px solid #ccc;
+            min-height: 50px;
+            padding: 8px;
+        }
 
-  /* Student Info Band */
-  .rc-student-band {
-    background: #f8f9fb;
-    border-left: 4px solid var(--rc-primary);
-    padding: 14px 20px;
-    margin: 0;
-  }
-  .rc-student-band td { font-size: 0.88rem; padding: 3px 10px; }
-  .rc-student-band .label { color: #666; font-weight: 600; white-space: nowrap; }
-  .rc-student-band .value { font-weight: 700; color: #1a202c; }
+        .signatures {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            margin-top: 40px;
+            font-size: 12px;
+        }
+        .signature-line {
+            border-top: 1px solid #333;
+            padding-top: 4px;
+            text-align: center;
+        }
 
-  /* Grading scale */
-  .rc-scale {
-    background: #fffbeb;
-    border: 1px solid #fde68a;
-    border-radius: 8px;
-    padding: 8px 16px;
-    font-size: 0.8rem;
-  }
-  .rc-scale .badge-grade {
-    display: inline-flex; align-items: center; gap: 4px;
-    padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700;
-  }
+        .no-grades {
+            text-align: center;
+            padding: 30px;
+            color: #777;
+            font-style: italic;
+        }
 
-  /* Section headings */
-  .rc-section-heading {
-    font-size: 0.72rem; font-weight: 800;
-    text-transform: uppercase; letter-spacing: 1px;
-    color: var(--rc-primary);
-    border-bottom: 2px solid var(--rc-primary);
-    padding-bottom: 5px; margin-bottom: 12px;
-  }
+        @media print {
+            body { padding: 0; }
+            .report-card { border: none; }
+            .no-print { display: none; }
+        }
 
-  /* Grades table */
-  .rc-table thead th {
-    background-color: var(--rc-primary) !important;
-    color: #fff !important;
-    font-size: 0.72rem; font-weight: 700;
-    text-transform: uppercase; letter-spacing: 0.5px;
-    border-color: transparent !important;
-    padding: 8px 10px;
-  }
-  .rc-table tbody tr:nth-child(even) { background: #f8f9fb; }
-  .rc-table tbody tr:hover { background: color-mix(in srgb, var(--rc-primary) 5%, transparent); }
-  .rc-table .avg-row {
-    background: color-mix(in srgb, var(--rc-primary) 10%, white) !important;
-    font-weight: 700;
-  }
-  .rc-table .avg-row td { color: var(--rc-primary); }
+        .print-btn {
+            display: block;
+            margin: 0 auto 20px;
+            padding: 8px 20px;
+            background: #14213d;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
 
-  /* Grade letter badges */
-  .grade-A { color: #059669; font-weight: 800; }
-  .grade-B { color: #2563eb; font-weight: 800; }
-  .grade-C { color: #d97706; font-weight: 800; }
-  .grade-D { color: #dc2626; font-weight: 800; }
-  .grade-F { color: #7c3aed; font-weight: 800; }
+    <button class="print-btn no-print" onclick="window.print()">Print Report Card</button>
 
-  /* Sub-tables (attendance, traits) */
-  .rc-sub-table thead th {
-    background: color-mix(in srgb, var(--rc-primary) 15%, white) !important;
-    color: var(--rc-primary) !important;
-    font-size: 0.7rem; font-weight: 700;
-    text-transform: uppercase;
-  }
+    <div class="report-card">
 
-  /* Signature line */
-  .sig-line {
-    border-top: 2px solid #1a202c;
-    padding-top: 6px;
-    font-size: 0.78rem; color: #4a5568;
-    margin: 0 12px;
-  }
+        <div class="header">
+            {% if school_settings.logo %}
+            <img src="{{ school_settings.logo.url }}" alt="{{ school_settings.name }}" class="school-logo">
+            {% endif %}
+            <p class="school-name">{{ school_settings.school_name|default:"School Name" }}</p>
+            <p class="school-address">{{ school_settings.address|default:"P.O. Box, Gaborone, Botswana" }}</p>
+            <div class="report-title">Student Report Card</div>
+        </div>
 
-  /* ── Print Styles ── */
-  @media print {
-    body * { visibility: hidden; }
-    #reportCard, #reportCard * { visibility: visible; }
-    #reportCard {
-      position: absolute; left: 0; top: 0;
-      width: 100%; border: none !important;
-      box-shadow: none !important;
-    }
-    .d-print-none { display: none !important; }
+        <div class="student-info">
+            <div><span class="label">Student Name:</span> {{ student.user.get_full_name }}</div>
+            <div><span class="label">Student No.:</span> {{ student.student_id|default:student.pk }}</div>
+            <div><span class="label">Class:</span> {{ student_class|default:"—" }}</div>
+            <div><span class="label">Session:</span> {{ active_session|default:"—" }}</div>
+            <div><span class="label">Term:</span> {{ active_term|default:"—" }}</div>
+            <div><span class="label">Class Size:</span> {{ class_size|default:"—" }}</div>
+        </div>
 
-    /* Preserve colors in print */
-    * {
-      -webkit-print-color-adjust: exact !important;
-      print-color-adjust: exact !important;
-      color-adjust: exact !important;
-    }
-    .rc-header-banner {
-      background: linear-gradient(135deg, var(--rc-primary) 0%, var(--rc-secondary) 100%) !important;
-    }
-    .rc-table thead th {
-      background-color: var(--rc-primary) !important;
-      color: #fff !important;
-    }
-    .rc-sub-table thead th {
-      background: color-mix(in srgb, var(--rc-primary) 15%, white) !important;
-      color: var(--rc-primary) !important;
-    }
-  }
-</style>
-{% endblock %}
+        {% if grades %}
+        <table class="grades">
+            <thead>
+                <tr>
+                    <th>Subject</th>
+                    <th class="center">Test</th>
+                    <th class="center">Exam</th>
+                    <th class="center">Total</th>
+                    <th class="center">Grade</th>
+                    <th>Remark</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for grade in grades %}
+                <tr>
+                    <td>{{ grade.subject }}</td>
+                    <td class="center">{{ grade.test_score }}</td>
+                    <td class="center">{{ grade.exam_score }}</td>
+                    <td class="center">{{ grade.total_score }}</td>
+                    <td class="center grade-letter grade-{{ grade.grade_letter }}">{{ grade.grade_letter }}</td>
+                    <td>{{ grade.remark }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
 
-{% block content %}
-
-{# ── Action Bar (hidden on print) ── #}
-<div class="d-print-none row mb-3">
-  <div class="col text-end d-flex gap-2 justify-content-end">
-    {% if user.is_admin or user.is_teacher %}
-    <a href="{% url 'academics:save_term_report' student.pk %}"
-       class="btn btn-outline-primary btn-sm">
-      <i class="bi bi-pencil-square me-1"></i> Edit Habits & Comments
-    </a>
-    {% endif %}
-    <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
-      <i class="bi bi-printer me-1"></i> Print
-    </button>
-    <a href="javascript:history.back();" class="btn btn-outline-secondary btn-sm">
-      <i class="bi bi-arrow-left me-1"></i> Back
-    </a>
-  </div>
-</div>
-
-{# ── Report Card ── #}
-<div id="reportCard" class="shadow border-0 rounded-3 overflow-hidden mb-4">
-
-  {# ── Branded Header Banner ── #}
-  <div class="rc-header-banner">
-    <div class="d-flex align-items-center gap-4">
-
-      {# Logo #}
-      <div class="rc-logo-wrap">
-        {% if school_settings.logo %}
-          <img src="{{ school_settings.logo.url }}" alt="{{ school_settings.school_name }}">
+        <div class="summary-row">
+            <div class="summary-box">
+                <div class="value">{{ avg_score|floatformat:1 }}</div>
+                <div class="label">Average Score</div>
+            </div>
+            <div class="summary-box">
+                <div class="value">
+                    {% if student_position %}{{ student_position }} {% else %}—{% endif %}
+                </div>
+                <div class="label">Class Position</div>
+            </div>
+            <div class="summary-box">
+                <div class="value">{{ grades|length }}</div>
+                <div class="label">Subjects</div>
+            </div>
+        </div>
         {% else %}
-          <i class="bi bi-shield-check rc-logo-placeholder"></i>
+        <div class="no-grades">No grades recorded for this session/term yet.</div>
         {% endif %}
-      </div>
 
-      {# School Info #}
-      <div class="flex-grow-1">
-        <div class="rc-school-name">{{ school_settings.school_name|default:"SchoolMS Academy" }}</div>
-        {% if school_settings.address %}
-          <div class="rc-school-sub"><i class="bi bi-geo-alt me-1"></i>{{ school_settings.address }}</div>
-        {% endif %}
-        {% if school_settings.phone %}
-          <div class="rc-school-sub"><i class="bi bi-telephone me-1"></i>{{ school_settings.phone }}</div>
-        {% endif %}
-        <span class="rc-report-title">
-          <i class="bi bi-file-text me-1"></i>
-          {{ student.student_class.name }} Progress Report — {{ active_session.name }}
-        </span>
-      </div>
-
-      {# Contact (right side) #}
-      <div class="text-end d-none d-md-block" style="min-width:140px;">
-        {% if school_settings.email %}
-          <span class="rc-contact-tag"><i class="bi bi-envelope me-1"></i>{{ school_settings.email }}</span>
-        {% endif %}
-        {% if school_settings.website %}
-          <span class="rc-contact-tag"><i class="bi bi-globe me-1"></i>{{ school_settings.website }}</span>
-        {% endif %}
-        <span class="rc-contact-tag mt-1">
-          <i class="bi bi-calendar3 me-1"></i>
-          {% now "d M Y" %}
-        </span>
-      </div>
-
-    </div>
-  </div>
-
-  {# ── Student Info Band ── #}
-  <div class="rc-student-band">
-    <div class="row">
-      <div class="col-md-6">
-        <table style="width:100%">
-          <tr>
-            <td class="label">Full Name</td>
-            <td class="value">{{ student.user.get_full_name }}</td>
-          </tr>
-          <tr>
-            <td class="label">Admission No.</td>
-            <td class="value">{{ student.admission_no }}</td>
-          </tr>
-          <tr>
-            <td class="label">Gender</td>
-            <td>{{ student.get_gender_display }}</td>
-          </tr>
-        </table>
-      </div>
-      <div class="col-md-6">
-        <table style="width:100%">
-          <tr>
-            <td class="label">Date of Birth</td>
-            <td>{{ student.date_of_birth|date:"d M Y" }}</td>
-          </tr>
-          <tr>
-            <td class="label">Class</td>
-            <td class="value">{{ student.student_class.name|default:"—" }}</td>
-          </tr>
-          <tr>
-            <td class="label">Academic Session</td>
-            <td>{{ active_session.name }}</td>
-          </tr>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  {# ── Body Content ── #}
-  <div class="p-4">
-
-    {# Grading Scale #}
-    <div class="rc-scale mb-4 d-flex flex-wrap gap-3 align-items-center">
-      <strong class="me-2" style="font-size:0.8rem;">GRADING SCALE:</strong>
-      <span class="badge-grade grade-A" style="background:#d1fae5;padding:3px 10px;border-radius:20px;">A · 90–100 Excellent</span>
-      <span class="badge-grade grade-B" style="background:#dbeafe;padding:3px 10px;border-radius:20px;">B · 80–89 Good</span>
-      <span class="badge-grade grade-C" style="background:#fef3c7;padding:3px 10px;border-radius:20px;">C · 70–79 Fair</span>
-      <span class="badge-grade grade-D" style="background:#fee2e2;padding:3px 10px;border-radius:20px;">D · 60–69 Unsatisfactory</span>
-      <span class="badge-grade grade-F" style="background:#ede9fe;padding:3px 10px;border-radius:20px;">F · 0–59 Failing</span>
-    </div>
-
-    {# ── Grades Table ── #}
-    <h6 class="rc-section-heading"><i class="bi bi-bar-chart-line me-1"></i>Academic Performance</h6>
-    <div class="table-responsive mb-4">
-      <table class="table table-bordered table-sm align-middle text-center rc-table">
-        <thead>
-          <tr>
-            <th class="text-start" rowspan="2" style="width:200px;">Subject</th>
-            {% for term in all_terms %}
-              <th>{{ term.name }}</th>
-            {% endfor %}
-            <th>Final Grade</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for subject in subjects %}
-          <tr>
-            <td class="text-start fw-semibold">{{ subject.name }}</td>
-            {% for term in all_terms %}
-              {% with grade=grade_matrix|get_item:subject.pk|get_item:term.pk %}
-              <td>
-                {% if grade %}
-                  <span class="fw-bold">{{ grade.total_score }}</span>
-                  <span class="d-block grade-{{ grade.grade_letter }}" style="font-size:0.7rem;">{{ grade.grade_letter }}</span>
-                {% else %}—{% endif %}
-              </td>
-              {% endwith %}
-            {% endfor %}
-            <td class="fw-bold">—</td>
-          </tr>
-          {% empty %}
-          <tr><td colspan="10" class="text-muted text-center py-3">No subjects assigned.</td></tr>
-          {% endfor %}
-
-          {# Average Row #}
-          <tr class="avg-row">
-            <td class="text-start"><i class="bi bi-calculator me-1"></i>Average</td>
-            {% for term in all_terms %}
-              <td>{{ term_averages|get_item:term.pk|default:"—" }}</td>
-            {% endfor %}
-            <td>—</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    {# ── Attendance + Traits ── #}
-    <div class="row mb-4">
-
-      {# Attendance #}
-      <div class="col-md-4">
-        <h6 class="rc-section-heading"><i class="bi bi-calendar-check me-1"></i>Daily Attendance</h6>
-        <table class="table table-bordered table-sm text-center rc-sub-table">
-          <thead>
-            <tr>
-              <th class="text-start"></th>
-              {% for term in all_terms %}<th>{{ term.name }}</th>{% endfor %}
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td class="text-start">Days Late</td>
-              {% for term in all_terms %}
-                <td>{{ term_report_map|get_item:term.pk|get_attr:"days_late"|default:"—" }}</td>
-              {% endfor %}
-            </tr>
-            <tr>
-              <td class="text-start">Days Absent</td>
-              {% for term in all_terms %}
-                <td>{{ term_report_map|get_item:term.pk|get_attr:"days_absent"|default:"—" }}</td>
-              {% endfor %}
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      {# Traits #}
-      <div class="col-md-8">
-        <h6 class="rc-section-heading">
-          <i class="bi bi-star me-1"></i>Desirable Traits &amp; Habits
-          <small class="fw-normal ms-2" style="font-size:0.65rem;opacity:0.7;">1=Excellent · 2=Good · 3=Fair · 4=Needs Improvement · 5=Unsatisfactory</small>
-        </h6>
-        <div class="row">
-          <div class="col-6">
-            <table class="table table-bordered table-sm text-center rc-sub-table">
-              <thead>
-                <tr>
-                  <th class="text-start">Work Habits</th>
-                  {% for term in all_terms %}<th>{{ term.name }}</th>{% endfor %}
-                </tr>
-              </thead>
-              <tbody>
-                {% for field, label in work_habits %}
-                <tr>
-                  <td class="text-start small">{{ label }}</td>
-                  {% for term in all_terms %}
-                    <td>{{ term_report_map|get_item:term.pk|get_attr:field|default:"—" }}</td>
-                  {% endfor %}
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-          <div class="col-6">
-            <table class="table table-bordered table-sm text-center rc-sub-table">
-              <thead>
-                <tr>
-                  <th class="text-start">Social Habits</th>
-                  {% for term in all_terms %}<th>{{ term.name }}</th>{% endfor %}
-                </tr>
-              </thead>
-              <tbody>
-                {% for field, label in social_habits %}
-                <tr>
-                  <td class="text-start small">{{ label }}</td>
-                  {% for term in all_terms %}
-                    <td>{{ term_report_map|get_item:term.pk|get_attr:field|default:"—" }}</td>
-                  {% endfor %}
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
+        <div class="comment-section">
+            <div class="comment-title">Class Teacher's Comment</div>
+            <div class="comment-box">{{ term_report.teacher_comment|default:"" }}</div>
         </div>
-      </div>
-    </div>
 
-    {# ── Teacher Comments ── #}
-    <div class="mb-4">
-      <h6 class="rc-section-heading"><i class="bi bi-chat-square-text me-1"></i>Class Teacher's Comments</h6>
-      <table class="table table-bordered table-sm rc-sub-table">
-        {% for term in all_terms %}
-        <tr>
-          <td class="fw-semibold" style="width:100px;color:var(--rc-primary);">{{ term.name }}</td>
-          <td>{{ term_report_map|get_item:term.pk|get_attr:"teacher_comment"|default:"" }}</td>
-        </tr>
-        {% endfor %}
-      </table>
-    </div>
-
-    {# ── Promotion ── #}
-    {% for term in all_terms %}
-      {% if term.current %}
-        {% with active_term_report=term_report_map|get_item:term.pk %}
-        {% if active_term_report %}
-        <div class="mb-4 border rounded-2 p-3" style="border-color: var(--rc-primary) !important; border-left: 4px solid var(--rc-primary) !important;">
-          <h6 class="rc-section-heading"><i class="bi bi-award me-1"></i>Promotion</h6>
-          <p class="text-muted small mb-2">
-            Criteria: Final grade in Maths &amp; English = 70%&nbsp;|&nbsp; Final Average = 75%
-          </p>
-          <div class="d-flex gap-4">
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" disabled
-                     {% if active_term_report.promotion_status == 'promoted' %}checked{% endif %}>
-              <label class="form-check-label fw-semibold text-success">Promoted</label>
-            </div>
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" disabled
-                     {% if active_term_report.promotion_status == 'probation' %}checked{% endif %}>
-              <label class="form-check-label fw-semibold text-warning">Promoted on Probation</label>
-            </div>
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" disabled
-                     {% if active_term_report.promotion_status == 'not' %}checked{% endif %}>
-              <label class="form-check-label fw-semibold text-danger">Not Promoted</label>
-            </div>
-          </div>
+        <div class="comment-section">
+            <div class="comment-title">Head Teacher's Comment</div>
+            <div class="comment-box">{{ term_report.headteacher_comment|default:"" }}</div>
         </div>
-        {% endif %}
-        {% endwith %}
-      {% endif %}
-    {% endfor %}
 
-    {# ── Signatures ── #}
-    <div class="row mt-4 pt-3">
-      <div class="col-4 text-center">
-        <div class="sig-line text-center">Class Teacher Signature</div>
-      </div>
-      <div class="col-4 text-center">
-        <div class="sig-line text-center">Principal Signature</div>
-      </div>
-      <div class="col-4 text-center">
-        <div class="sig-line text-center">Date</div>
-      </div>
+        <div class="signatures">
+            <div class="signature-line">Class Teacher's Signature</div>
+            <div class="signature-line">Head Teacher's Signature</div>
+        </div>
+
     </div>
 
-  </div>{# /p-4 #}
-</div>{# /reportCard #}
-
-{% endblock %}
+</body>
+</html>

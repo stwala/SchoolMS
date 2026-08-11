@@ -381,58 +381,15 @@ def save_student_grades(request):
     return JsonResponse({'status': 'ok', 'saved': saved_count, 'student': student.user.get_full_name()})
 
 
-# @login_required
-# def student_report_card(request, student_id):
-#     student = get_object_or_404(Student, pk=student_id)
-
-#     if request.user.is_parent:
-#         if not student.grades_visible:
-#             messages.error(request, 'Grades are not yet available. Please ensure fees are fully paid.')
-#             return redirect('finance:invoice_list')
-#     # Check permissions
-#     if not request.user.is_admin:
-#         if request.user.is_student and request.user.student_profile != student:
-#             messages.error(request, 'Access denied.')
-#             return redirect('/')
-#         elif request.user.is_parent and student not in request.user.parent_profile.students.all():
-#             messages.error(request, 'Access denied.')
-#             return redirect('/')
-
-#     # Get active session and term
-#     active_session = AcademicSession.objects.filter(current=True).first()
-#     active_term = AcademicTerm.objects.filter(current=True).first()
-
-#     grades = Grade.objects.filter(student=student)
-#     if active_session:
-#         grades = grades.filter(session=active_session)
-#     if active_term:
-#         grades = grades.filter(term=active_term)
-        
-#     grades = grades.select_related('subject', 'session', 'term')
-
-#     avg_score = 0
-#     if grades.exists():
-#         avg_score = sum(g.total_score() for g in grades) / grades.count()
-
-#     context = {
-#         'student': student,
-#         'grades': grades,
-#         'active_session': active_session,
-#         'active_term': active_term,
-#         'avg_score': avg_score,
-#     }
-#     return render(request, 'academics/report_card.html', context)
-
-
 @login_required
 def student_report_card(request, student_id):
     student = get_object_or_404(Student, pk=student_id)
 
     if request.user.is_parent:
         if not student.grades_visible:
-            messages.error(request, 'Grades not yet available. Please ensure fees are fully paid.')
+            messages.error(request, 'Grades are not yet available. Please ensure fees are fully paid.')
             return redirect('finance:invoice_list')
-
+    # Check permissions
     if not request.user.is_admin:
         if request.user.is_student and request.user.student_profile != student:
             messages.error(request, 'Access denied.')
@@ -441,68 +398,145 @@ def student_report_card(request, student_id):
             messages.error(request, 'Access denied.')
             return redirect('/')
 
+    # Get active session and term
     active_session = AcademicSession.objects.filter(current=True).first()
-    all_terms      = AcademicTerm.objects.all().order_by('name')
-    subjects       = student.student_class.subjects.all() if student.student_class else []
     active_term = AcademicTerm.objects.filter(current=True).first()
 
+    grades = Grade.objects.filter(student=student)
+    if active_session:
+        grades = grades.filter(session=active_session)
+    if active_term:
+        grades = grades.filter(term=active_term)
+        
+    grades = grades.select_related('subject', 'session', 'term', 'student_class')
 
-    # Build grade matrix: {subject_id: {term_id: grade_obj}}
-    all_grades = Grade.objects.filter(
-        student=student, session=active_session
-    ).select_related('subject', 'term') if active_session else []
+    avg_score = 0
+    if grades.exists():
+        avg_score = sum(g.total_score() for g in grades) / grades.count()
 
-    grade_matrix = {}
-    for g in all_grades:
-        grade_matrix.setdefault(g.subject_id, {})[g.term_id] = g
+     # --------------------------------------------------
+    # CLASS RANKING
+    # --------------------------------------------------
 
-    # Compute averages per term
-    term_averages = {}
-    for term in all_terms:
-        scores = [
-            grade_matrix.get(s.pk, {}).get(term.pk).total_score()
-            for s in subjects
-            if grade_matrix.get(s.pk, {}).get(term.pk)
-        ]
-        term_averages[term.pk] = round(sum(scores) / len(scores), 1) if scores else None
+    student_class = grades.first().student_class if grades.exists() else None
 
-    # Fetch term reports
-    term_reports = StudentTermReport.objects.filter(
-        student=student, session=active_session
-    ).select_related('term') if active_session else []
-    term_report_map = {tr.term_id: tr for tr in term_reports}
+    student_position = None
+    class_size = 0
+    rankings = []
 
+    if (
+        student_class
+        and active_session
+        and active_term
+    ):
+        rankings = rank_students(
+            student_class,
+            active_session,
+            active_term
+        )
 
-    work_habits = [
-        ('follows_directions',   'Follows directions'),
-        ('works_independently',  'Works well independently'),
-        ('attentive_in_class',   'Is attentive in class'),
-        ('does_work_neatly',     'Does work neatly'),
-        ('completes_daily_work', 'Completes daily work'),
-        ('completes_homework',   'Completes homework'),
-    ]
-    social_habits = [
-        ('is_courteous',            'Is courteous'),
-        ('gets_along_with_others',  'Gets along with others'),
-        ('exhibits_self_control',   'Exhibits self-control'),
-        ('does_not_disturb_others', 'Does not disturb others'),
-        ('shows_respect',           'Shows respect for authority'),
-        ('responds_to_correction',  'Responds well to correction'),
-    ]
+        class_size = len(rankings)
+
+        for row in rankings:
+            if row['student'].pk == student.pk:
+                student_position = row['position']
+                break
+
     context = {
-        'student'        : student,
-        'active_session' : active_session,
-        'active_term'       : active_term,                          # ← add
-        'active_term_id'    : active_term.pk if active_term else None, 
-        'all_terms'      : all_terms,
-        'subjects'       : subjects,
-        'grade_matrix'   : grade_matrix,
-        'term_averages'  : term_averages,
-        'term_report_map': term_report_map,
-        'work_habits'  : work_habits,
-        'social_habits': social_habits,
+        'student': student,
+        'grades': grades,
+        'active_session': active_session,
+        'active_term': active_term,
+        'avg_score': avg_score,
+
+        # Ranking information
+        'student_position': student_position,
+        'class_size': class_size,
+        'student_class': student_class,
     }
+
     return render(request, 'academics/report_card.html', context)
+
+
+# @login_required
+# def student_report_card(request, student_id):
+#     student = get_object_or_404(Student, pk=student_id)
+
+#     if request.user.is_parent:
+#         if not student.grades_visible:
+#             messages.error(request, 'Grades not yet available. Please ensure fees are fully paid.')
+#             return redirect('finance:invoice_list')
+
+#     if not request.user.is_admin:
+#         if request.user.is_student and request.user.student_profile != student:
+#             messages.error(request, 'Access denied.')
+#             return redirect('/')
+#         elif request.user.is_parent and student not in request.user.parent_profile.students.all():
+#             messages.error(request, 'Access denied.')
+#             return redirect('/')
+
+#     active_session = AcademicSession.objects.filter(current=True).first()
+#     all_terms      = AcademicTerm.objects.all().order_by('name')
+#     subjects       = student.student_class.subjects.all() if student.student_class else []
+#     active_term = AcademicTerm.objects.filter(current=True).first()
+
+
+#     # Build grade matrix: {subject_id: {term_id: grade_obj}}
+#     all_grades = Grade.objects.filter(
+#         student=student, session=active_session
+#     ).select_related('subject', 'term') if active_session else []
+
+#     grade_matrix = {}
+#     for g in all_grades:
+#         grade_matrix.setdefault(g.subject_id, {})[g.term_id] = g
+
+#     # Compute averages per term
+#     term_averages = {}
+#     for term in all_terms:
+#         scores = [
+#             grade_matrix.get(s.pk, {}).get(term.pk).total_score()
+#             for s in subjects
+#             if grade_matrix.get(s.pk, {}).get(term.pk)
+#         ]
+#         term_averages[term.pk] = round(sum(scores) / len(scores), 1) if scores else None
+
+#     # Fetch term reports
+#     term_reports = StudentTermReport.objects.filter(
+#         student=student, session=active_session
+#     ).select_related('term') if active_session else []
+#     term_report_map = {tr.term_id: tr for tr in term_reports}
+
+
+#     work_habits = [
+#         ('follows_directions',   'Follows directions'),
+#         ('works_independently',  'Works well independently'),
+#         ('attentive_in_class',   'Is attentive in class'),
+#         ('does_work_neatly',     'Does work neatly'),
+#         ('completes_daily_work', 'Completes daily work'),
+#         ('completes_homework',   'Completes homework'),
+#     ]
+#     social_habits = [
+#         ('is_courteous',            'Is courteous'),
+#         ('gets_along_with_others',  'Gets along with others'),
+#         ('exhibits_self_control',   'Exhibits self-control'),
+#         ('does_not_disturb_others', 'Does not disturb others'),
+#         ('shows_respect',           'Shows respect for authority'),
+#         ('responds_to_correction',  'Responds well to correction'),
+#     ]
+#     context = {
+#         'student'        : student,
+#         'active_session' : active_session,
+#         'active_term'       : active_term,                          # ← add
+#         'active_term_id'    : active_term.pk if active_term else None, 
+#         'all_terms'      : all_terms,
+#         'subjects'       : subjects,
+#         'grade_matrix'   : grade_matrix,
+#         'term_averages'  : term_averages,
+#         'term_report_map': term_report_map,
+#         'work_habits'  : work_habits,
+#         'social_habits': social_habits,
+#     }
+#     return render(request, 'academics/report_card.html', context)
 
 
 from .models import StudentTermReport
