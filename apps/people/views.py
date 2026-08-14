@@ -109,6 +109,7 @@ def student_grades_json(request, pk):
         'term_id': active_term.pk if active_term else None,
         'subjects': subjects,
         'teacher_comment': term_report.teacher_comment if term_report else '',
+        'headteacher_comment':term_report.headteacher_comment if term_report else '',
     })
 
 

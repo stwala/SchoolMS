@@ -1,4 +1,5 @@
 from django.db import models
+from apps.dashboard.models import ClassNamingRule
 
 class AcademicSession(models.Model):
     """Academic Session (e.g. 2025/2026)"""
@@ -37,35 +38,45 @@ class Subject(models.Model):
 
 
 class StudentClass(models.Model):
-    LEVEL_CHOICES = [
-        ('primary', "Primary"),
-        ('junior', "Junior Secondary"),
-        ('secondary', "Senior Secondary"),
-    ]
-
-    # RANKING_METHODS =[
-    #     ('marks',"Total Marks"),
-    #     ('points',"Points"),
-    # ]
+    
     """Class or Room (e.g. Grade 10-A, JSS 1)"""
-    name = models.CharField(max_length=20, unique=True)
+    name = models.CharField(max_length=20, unique=True,editable=False)
     grade_level = models.PositiveSmallIntegerField()
     stream = models.CharField(max_length=50, blank=True, null=True)
-    education_level = models.CharField(max_length=20, choices=LEVEL_CHOICES, default='primary')
+    # education_level = models.CharField(max_length=20, choices=LEVEL_CHOICES, default='primary')
     subjects = models.ManyToManyField(Subject, related_name='classes', blank=True)
     # ranking_method = models.CharField(max_length=20, choices=RANKING_METHODS, default='marks')
 
     class Meta:
         verbose_name = "Class"
         verbose_name_plural = "Classes"
-        ordering = ['name']
+        ordering = ['grade_level', 'stream']
 
     def __str__(self):
-        return f"{self.name} {self.grade_level}{self.stream or ''}"
+        return self.name
 
-    @property
-    def ranking_method(self):
-        return 'marks' if self.grade_level <= 9 else 'points'
+    def save(self, *args, **kwargs):
+        rule = ClassNamingRule.for_grade(self.grade_level)
+
+        if not rule:
+            raise ValueError(
+                f"No class naming rule configured for grade "
+                f"{self.grade_level}."
+            )
+
+        if rule.naming_convention == 'custom':
+            prefix = rule.custom_name
+        else:
+            prefix = rule.get_naming_convention_display()
+
+        self.education_level = rule.education_level
+
+        self.name = f"{prefix} {self.grade_level}"
+
+        if self.stream:
+            self.name += self.stream
+
+        super().save(*args, **kwargs)
 
 
 class Grade(models.Model):
@@ -153,7 +164,7 @@ class StudentTermReport(models.Model):
 
     # Teacher comment
     teacher_comment = models.TextField(blank=True)
-    head_teacher_comment = models.TextField(blank=True)
+    headteacher_comment = models.TextField(blank=True)
 
     # Promotion (only meaningful on 3rd term)
     promotion_status = models.CharField(

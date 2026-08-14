@@ -47,3 +47,47 @@ class SchoolSettings(models.Model):
         """Always returns the single settings instance."""
         obj, _ = cls.objects.get_or_create(pk=1)
         return obj
+
+
+class ClassNamingRule(models.Model):
+    CATEGORIES = [
+        ('grade', 'Grade'),
+        ('standard', 'Standard'),
+        ('form', 'Form'),
+        ('custom', 'Custom'),
+    ]
+
+    EDUCATION_LEVEL_CHOICES = [
+        ('primary', 'Primary'),
+        ('junior', 'Junior Secondary'),
+        ('secondary', 'Senior Secondary'),
+    ]
+
+    RANKING_CHOICES = [
+        ('marks', 'Total Marks'),
+        ('points', 'Points'),
+    ]
+
+    school_settings = models.ForeignKey(SchoolSettings,on_delete=models.CASCADE, related_name='class_naming_rules')
+    from_grade = models.PositiveSmallIntegerField()
+    to_grade = models.PositiveSmallIntegerField()
+    naming_convention = models.CharField(max_length=20,choices=CATEGORIES,default='grade' )
+    custom_name = models.CharField(max_length=50,blank=True)
+    education_level = models.CharField(max_length=20,choices=EDUCATION_LEVEL_CHOICES)
+    ranking_method = models.CharField(max_length=20,choices=RANKING_CHOICES,default='marks')
+
+    class Meta:
+        ordering = ['from_grade']
+
+    def __str__(self):
+        return f"{self.from_grade}-{self.to_grade}: {self.get_naming_convention_display()}/{self.get_education_level_display()}"
+
+    @classmethod
+    def for_grade(cls, grade_level):
+        school_settings = SchoolSettings.get()
+
+        return cls.objects.filter(
+            school_settings=school_settings,
+            from_grade__lte=grade_level,
+            to_grade__gte=grade_level
+        ).first()
