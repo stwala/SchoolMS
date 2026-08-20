@@ -1,7 +1,7 @@
 from django import forms
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Submit, Row, Column
-from .models import Notice,SchoolSettings,ClassNamingRule
+from .models import Notice, SchoolSettings, ClassNamingRule
 
 class NoticeForm(forms.ModelForm):
     class Meta:
@@ -42,10 +42,24 @@ class SchoolSettingsForm(forms.ModelForm):
 class ClassNamingRuleForm(forms.ModelForm):
     class Meta:
         model = ClassNamingRule
-        fields = ['from_grade','to_grade','naming_convention','custom_name']
+        fields = [
+            'from_grade',
+            'to_grade',
+            'naming_convention',
+            'custom_name',
+            'education_level',
+            'ranking_method',
+        ]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs.setdefault('class', 'form-control')
+            field.widget.attrs['form'] = 'namingRuleForm'
+        self.fields['naming_convention'].widget.attrs['class'] = 'form-select'
+        self.fields['education_level'].widget.attrs['class'] = 'form-select'
+        self.fields['ranking_method'].widget.attrs['class'] = 'form-select'
+
         self.helper = FormHelper()
         self.helper.layout = Layout(
             Row(
@@ -54,6 +68,8 @@ class ClassNamingRuleForm(forms.ModelForm):
             ),
             'naming_convention',
             'custom_name',
+            'education_level',
+            'ranking_method',
             Submit('submit', 'Save Rule', css_class='btn btn-primary btn-sm mt-2')
         )
 
@@ -62,7 +78,15 @@ class ClassNamingRuleForm(forms.ModelForm):
 
         from_grade = cleaned_data.get('from_grade')
         to_grade = cleaned_data.get('to_grade')
+        naming_convention = cleaned_data.get('naming_convention')
+        custom_name = cleaned_data.get('custom_name')
         school_settings = SchoolSettings.get()
+
+        if naming_convention == 'custom' and not custom_name:
+            self.add_error(
+                'custom_name',
+                'Enter a custom name when using the custom naming convention.'
+            )
 
         if from_grade and to_grade:
             if from_grade > to_grade:

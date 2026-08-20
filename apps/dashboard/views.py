@@ -2,13 +2,14 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
+from django.urls import reverse
 from apps.accounts.decorators import admin_required
 from apps.academics.models import StudentClass, AcademicSession, AcademicTerm, Grade, Subject
 from apps.people.models import Student, Teacher, Parent
 from apps.finance.models import Invoice, Payment
 from apps.attendance.models import Attendance
-from .models import Notice, SchoolSettings
-from .forms import NoticeForm, SchoolSettingsForm
+from .models import Notice, SchoolSettings, ClassNamingRule
+from .forms import NoticeForm, SchoolSettingsForm, ClassNamingRuleForm
 
 # ── Entry Redirector ──────────────────────────────────────
 def index(request):
@@ -482,7 +483,19 @@ def notice_delete(request, pk):
     return JsonResponse({'status': 'error'}, status=405)
 
 
-# apps/dashboard/views.py
+def _school_settings_context(settings, form=None, naming_rule_form=None, active_tab='branding'):
+    return {
+        'form': form or SchoolSettingsForm(instance=settings),
+        'settings': settings,
+        'title': 'School Settings',
+        'naming_rules': ClassNamingRule.objects.filter(
+            school_settings=settings
+        ).order_by('from_grade'),
+        'naming_rule_form': naming_rule_form or ClassNamingRuleForm(),
+        'active_tab': active_tab,
+    }
+
+
 @login_required
 @admin_required
 def school_settings(request):
@@ -494,6 +507,44 @@ def school_settings(request):
         form.save()
         messages.success(request, 'School settings updated successfully.')
         return redirect('dashboard:school_settings')
-    return render(request, 'dashboard/school_settings.html', {
-        'form': form, 'settings': settings, 'title': 'School Settings'
-    })
+    return render(
+        request,
+        'dashboard/school_settings.html',
+        _school_settings_context(settings, form=form, active_tab=request.GET.get('tab', 'branding')),
+    )
+
+
+@login_required
+@admin_required
+def naming_rule_add(request):
+    settings = SchoolSettings.get()
+    if request.method != 'POST':
+        return redirect('dashboard:school_settings')
+
+    form = ClassNamingRuleForm(request.POST)
+    if form.is_valid():
+        naming_rule = form.save(commit=False)
+        naming_rule.school_settings = settings
+        naming_rule.save()
+        messages.success(request, 'Class naming rule added successfully.')
+        return redirect(f"{reverse('dashboard:school_settings')}?tab=naming")
+
+    messages.error(request, 'Please fix the class naming rule details below.')
+    return render(
+        request,
+        'dashboard/school_settings.html',
+        _school_settings_context(settings, naming_rule_form=form, active_tab='naming'),
+    )
+
+
+@login_required
+@admin_required
+def naming_rule_delete(request, pk):
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error'}, status=405)
+
+    settings = SchoolSettings.get()
+    naming_rule = get_object_or_404(ClassNamingRule, pk=pk, school_settings=settings)
+    naming_rule.delete()
+    messages.success(request, 'Class naming rule deleted successfully.')
+    return redirect(f"{reverse('dashboard:school_settings')}?tab=naming")

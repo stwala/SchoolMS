@@ -96,18 +96,22 @@
       </div>
     </div>
 
+    <form method="post" action="{% url 'dashboard:naming_rule_add' %}" id="namingRuleForm">
+      {% csrf_token %}
+    </form>
+
     <form method="post" enctype="multipart/form-data" id="settingsForm">
       {% csrf_token %}
 
       {# ── Tab Nav ── #}
       <ul class="nav settings-tab bg-white rounded-3 p-2 shadow-sm mb-4 gap-1" id="settingsTabs" role="tablist">
         <li class="nav-item" role="presentation">
-          <button class="nav-link active" id="tab-branding" data-bs-toggle="tab" data-bs-target="#pane-branding" type="button" role="tab">
+          <button class="nav-link {% if active_tab != 'naming' %}active{% endif %}" id="tab-branding" data-bs-toggle="tab" data-bs-target="#pane-branding" type="button" role="tab">
             <i class="bi bi-building me-1"></i> Branding
           </button>
         </li>
         <li class="nav-item" role="presentation">
-          <button class="nav-link" id="tab-branding" data-bs-toggle="tab" data-bs-target="#pane-class" type="button" role="tab">
+          <button class="nav-link {% if active_tab == 'naming' %}active{% endif %}" id="tab-class" data-bs-toggle="tab" data-bs-target="#pane-class" type="button" role="tab">
             <i class="bi bi-pen me-1"></i> Naming Rule
         </button>
         </li>
@@ -127,7 +131,7 @@
       <div class="tab-content">
 
         {# ── Branding Tab ── #}
-        <div class="tab-pane fade show active" id="pane-branding" role="tabpanel">
+        <div class="tab-pane fade {% if active_tab != 'naming' %}show active{% endif %}" id="pane-branding" role="tabpanel">
           <div class="card border-0 shadow-sm">
             <div class="card-body p-4">
 
@@ -178,6 +182,97 @@
         </div>
 
         {# ── Contact Tab ── #}
+        <div class="tab-pane fade {% if active_tab == 'naming' %}show active{% endif %}" id="pane-class" role="tabpanel">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+
+              <div class="d-flex align-items-center gap-2 mb-4">
+                <div class="section-icon"><i class="bi bi-card-text"></i></div>
+                <div><h6 class="fw-bold mb-0">Class Naming Convention</h6><small class="text-muted">Create grade ranges and class labels</small></div>
+              </div>
+
+              {% if naming_rule_form.non_field_errors %}
+                <div class="alert alert-danger py-2">
+                  {{ naming_rule_form.non_field_errors }}
+                </div>
+              {% endif %}
+
+              <div class="row g-3 mb-4">
+                <div class="col-md-3">
+                  <label class="form-label fw-semibold small" for="{{ naming_rule_form.from_grade.id_for_label }}">From Grade</label>
+                  {{ naming_rule_form.from_grade }}
+                  {{ naming_rule_form.from_grade.errors }}
+                </div>
+                <div class="col-md-3">
+                  <label class="form-label fw-semibold small" for="{{ naming_rule_form.to_grade.id_for_label }}">To Grade</label>
+                  {{ naming_rule_form.to_grade }}
+                  {{ naming_rule_form.to_grade.errors }}
+                </div>
+                <div class="col-md-3">
+                  <label class="form-label fw-semibold small" for="{{ naming_rule_form.naming_convention.id_for_label }}">Naming Convention</label>
+                  {{ naming_rule_form.naming_convention }}
+                  {{ naming_rule_form.naming_convention.errors }}
+                </div>
+                <div class="col-md-3">
+                  <label class="form-label fw-semibold small" for="{{ naming_rule_form.custom_name.id_for_label }}">Custom Name</label>
+                  {{ naming_rule_form.custom_name }}
+                  {{ naming_rule_form.custom_name.errors }}
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold small" for="{{ naming_rule_form.education_level.id_for_label }}">Education Level</label>
+                  {{ naming_rule_form.education_level }}
+                  {{ naming_rule_form.education_level.errors }}
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold small" for="{{ naming_rule_form.ranking_method.id_for_label }}">Ranking Method</label>
+                  {{ naming_rule_form.ranking_method }}
+                  {{ naming_rule_form.ranking_method.errors }}
+                </div>
+              </div>
+
+              <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                  <thead>
+                    <tr>
+                      <th>Grade Range</th>
+                      <th>Convention</th>
+                      <th>Custom Name</th>
+                      <th>Education Level</th>
+                      <th>Ranking</th>
+                      <th class="text-end">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for rule in naming_rules %}
+                      <tr>
+                        <td class="fw-semibold">{{ rule.from_grade }} - {{ rule.to_grade }}</td>
+                        <td>{{ rule.get_naming_convention_display }}</td>
+                        <td>{{ rule.custom_name|default:"-" }}</td>
+                        <td>{{ rule.get_education_level_display }}</td>
+                        <td>{{ rule.get_ranking_method_display }}</td>
+                        <td class="text-end">
+                          <button type="submit"
+                                  class="btn btn-outline-danger btn-sm"
+                                  formmethod="post"
+                                  formaction="{% url 'dashboard:naming_rule_delete' rule.pk %}"
+                                  onclick="return confirm('Delete this naming rule?');">
+                            <i class="bi bi-trash"></i>
+                          </button>
+                        </td>
+                      </tr>
+                    {% empty %}
+                      <tr>
+                        <td colspan="6" class="text-center text-muted py-4">No class naming rules added yet.</td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
         <div class="tab-pane fade" id="pane-contact" role="tabpanel">
           <div class="card border-0 shadow-sm">
             <div class="card-body p-4">
@@ -363,7 +458,7 @@
         <a href="{% url 'dashboard:admin_dashboard' %}" class="btn btn-light border px-4">
           <i class="bi bi-x me-1"></i>Cancel
         </a>
-        <button type="submit" class="btn btn-primary px-5">
+        <button type="submit" class="btn btn-primary px-5" id="settingsSaveButton">
           <i class="bi bi-save me-2"></i>Save Settings
         </button>
       </div>
@@ -431,6 +526,28 @@
       }
     });
   });
+
+  const saveButton = document.getElementById('settingsSaveButton');
+  const namingTab = document.getElementById('tab-class');
+  const tabButtons = document.querySelectorAll('#settingsTabs button[data-bs-toggle="tab"]');
+
+  function syncSaveButton() {
+    if (!saveButton) return;
+
+    const namingIsActive = namingTab && namingTab.classList.contains('active');
+    if (namingIsActive) {
+      saveButton.setAttribute('form', 'namingRuleForm');
+      saveButton.innerHTML = '<i class="bi bi-plus-lg me-2"></i>Add Rule';
+    } else {
+      saveButton.removeAttribute('form');
+      saveButton.innerHTML = '<i class="bi bi-save me-2"></i>Save Settings';
+    }
+  }
+
+  tabButtons.forEach(tabButton => {
+    tabButton.addEventListener('shown.bs.tab', syncSaveButton);
+  });
+  syncSaveButton();
 })();
 </script>
 {% endblock %}

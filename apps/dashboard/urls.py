@@ -20,4 +20,6 @@ urlpatterns = [
     path('notices/<int:pk>/delete/', views.notice_delete, name='notice_delete'),
 
     path('settings/', views.school_settings, name='school_settings'),
+    path('settings/naming-rule/add/', views.naming_rule_add, name='naming_rule_add'),
+    path('settings/naming-rule/<int:pk>/delete/', views.naming_rule_delete, name='naming_rule_delete'),
 ]
