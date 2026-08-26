@@ -4,7 +4,7 @@
 {% block content %}
 {% if not user.is_admin %}
 <div class="alert border-0 mb-3 d-flex align-items-center gap-2"
-     style="background: rgba(90,103,216,0.07); border-left: 4px solid hsl(235,65%,60%) !important; border-radius: 8px;">
+     style="background: color-mix(in srgb, var(--school-primary) 8%, transparent); border-left: 4px solid var(--school-primary) !important; border-radius: 8px;">
   <i class="bi bi-filter-circle text-primary fs-5"></i>
   <div>
     <span class="fw-semibold text-primary">Restricted View</span>

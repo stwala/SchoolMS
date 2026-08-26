@@ -5,7 +5,7 @@
 
 {% block auth_content %}
 <div class="min-vh-100 d-flex align-items-center justify-content-center"
-     style="background: linear-gradient(135deg, hsl(235,60%,20%) 0%, hsl(250,50%,35%) 50%, hsl(220,60%,25%) 100%);">
+     style="background: linear-gradient(135deg, var(--school-navbar, #1a202c) 0%, var(--school-primary, #5a67d8) 100%);">
   <div class="text-center mb-5 position-absolute top-0 start-0 end-0 pt-5 d-none d-md-block">
     <!-- Decorative background shapes -->
   </div>
@@ -14,16 +14,20 @@
        style="width: 420px; border-radius: 18px; background: rgba(255,255,255,0.97);">
 
     <!-- Top accent bar -->
-    <div style="height: 5px; background: linear-gradient(90deg, hsl(235,60%,55%), hsl(260,70%,65%));"></div>
+    <div style="height: 5px; background: linear-gradient(90deg, var(--school-primary, #5a67d8), var(--school-secondary, #4c51bf));"></div>
 
     <div class="p-5">
       <!-- Logo / Brand -->
       <div class="text-center mb-4">
-        <div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-primary-subtle mb-3"
-             style="width: 64px; height: 64px;">
-          <i class="bi bi-shield-check text-primary fs-2"></i>
-        </div>
-        <h3 class="fw-bold text-dark mb-1" style="font-family: 'Outfit', sans-serif;">SchoolMS Academy</h3>
+        {% if school_settings.logo %}
+          <img src="{{ school_settings.logo.url }}" alt="{{ school_settings.school_name }}" height="48" class="mb-3" style="object-fit: contain;">
+        {% else %}
+          <div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-primary-subtle mb-3"
+               style="width: 64px; height: 64px;">
+            <i class="bi bi-shield-check text-primary fs-2"></i>
+          </div>
+        {% endif %}
+        <h3 class="fw-bold text-dark mb-1" style="font-family: 'Outfit', sans-serif;">{{ school_settings.school_name|default:"SchoolMS" }}</h3>
         <p class="text-muted small mb-0">Sign in to your account portal</p>
       </div>
 

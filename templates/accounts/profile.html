@@ -9,7 +9,7 @@
     <div class="card shadow-sm border-0 text-center p-4">
       {% if user.profile_pic %}
         <img src="{{ user.profile_pic.url }}" class="rounded-circle mx-auto d-block mb-3 border border-3"
-             style="width:100px; height:100px; object-fit:cover; border-color: hsl(235,60%,55%) !important;">
+             style="width:100px; height:100px; object-fit:cover; border-color: var(--school-primary) !important;">
       {% else %}
         <div class="mx-auto d-flex align-items-center justify-content-center rounded-circle mb-3 bg-primary-subtle"
              style="width:100px;height:100px;">
