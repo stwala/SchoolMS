@@ -2,78 +2,89 @@
 {% block title %}Student Dashboard{% endblock %}
 
 {% block content %}
-<!-- Welcome row -->
-<div class="row g-3 mb-4 animate-fade-in">
-  <div class="col-md-8">
-    <div class="card shadow-sm border-0 bg-primary text-white p-4 h-100">
-      <h3 class="fw-bold mb-1">Welcome back, {{ student.user.get_full_name }}!</h3>
-      <p class="mb-0 opacity-75">Check your current grades, fees statements, daily attendance status, and general announcements.</p>
+<div class="row g-3 mb-4">
+  <div class="col-lg-8">
+    <div class="hero-panel is-branded h-100">
+      <div class="workspace-kicker">Student Portal</div>
+      <h1 class="hero-greeting">Welcome back, {{ student.user.get_full_name }}</h1>
+      <p class="workspace-subtitle mb-3">Review your grades, attendance, fee statements, and school announcements in one place.</p>
+      <span class="hero-meta"><i class="bi bi-hash"></i> Admission No: {{ student.admission_no }}</span>
     </div>
   </div>
-  
-  <div class="col-md-4">
-    <div class="card shadow-sm border-0 p-3 h-100 text-center justify-content-center">
-      <h6 class="text-muted small uppercase tracking-wider mb-1">Current Class</h6>
-      <h4 class="fw-bold text-primary mb-1">{{ student.student_class.name|default:"Not Assigned" }}</h4>
-      <small class="text-muted">Admission No: {{ student.admission_no }}</small>
+  <div class="col-lg-4">
+    <div class="info-card">
+      <div class="info-card-label">Current Class</div>
+      <div class="info-card-value tone-blue">{{ student.student_class.name|default:"Not Assigned" }}</div>
+      <div class="info-card-note">Your active class group for this term</div>
     </div>
   </div>
 </div>
 
-<div class="row g-4">
-  <!-- Chart Performance -->
-  <div class="col-md-8">
-    <div class="card shadow-sm border-0 p-4 h-100">
-      <div class="d-flex justify-content-between align-items-center mb-3">
-        <h5 class="fw-bold text-dark mb-0">Grade Performance Curve</h5>
-        <a href="{% url 'academics:student_report_card' student.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-file-text"></i> View Report Card</a>
+<div class="row g-3 mb-4">
+  <!-- Grade Performance -->
+  <div class="col-lg-8">
+    <div class="content-panel h-100">
+      <div class="panel-header">
+        <div>
+          <h2 class="panel-title">Grade Performance</h2>
+          <p class="panel-subtitle">Subject scores for the active term</p>
+        </div>
+        <a href="{% url 'academics:student_report_card' student.pk %}" class="btn btn-ghost btn-sm">
+          <i class="bi bi-file-text me-1"></i> Report Card
+        </a>
       </div>
-      {% if grades %}
-      <div style="height: 250px; position: relative;">
-        <canvas id="studentPerformanceChart"></canvas>
+      <div class="panel-body">
+        {% if grades %}
+        <div class="chart-frame" style="height: 260px;">
+          <canvas id="studentPerformanceChart"></canvas>
+        </div>
+        {% else %}
+        <div class="empty-state">
+          <i class="bi bi-file-earmark-x"></i>
+          No grades recorded for this active term.
+        </div>
+        {% endif %}
       </div>
-      {% else %}
-      <div class="text-center py-5 text-muted">
-        <i class="bi bi-file-earmark-x fs-3 d-block mb-2 text-muted"></i>
-        No grades recorded for this active term.
-      </div>
-      {% endif %}
     </div>
   </div>
 
-  <!-- Attendance and Fees Stats -->
-  <div class="col-md-4">
-    <div class="row g-3 h-100">
-      <!-- Attendance Rate -->
-      <div class="col-12">
-        <div class="card shadow-sm border-0 p-3 bg-white">
+  <!-- Attendance & Fees -->
+  <div class="col-lg-4">
+    <div class="d-flex flex-column gap-3 h-100">
+      <div class="content-panel">
+        <div class="panel-body">
           <div class="d-flex justify-content-between align-items-center mb-2">
-            <h6 class="text-muted small uppercase tracking-wider mb-0">Attendance Rate</h6>
-            <span class="badge {% if att_rate < 75 %}bg-danger{% else %}bg-success{% endif %}">{{ att_rate|stringformat:".1f" }}%</span>
+            <div class="stat-label mb-0">Attendance Rate</div>
+            <span class="badge {% if att_rate < 75 %}bg-danger-subtle{% else %}bg-success-subtle{% endif %}">
+              {{ att_rate|stringformat:".1f" }}%
+            </span>
           </div>
-          <div class="progress mb-2" style="height: 8px;">
-            <div class="progress-bar {% if att_rate < 75 %}bg-danger{% else %}bg-success{% endif %}" role="progressbar" style="width: {{ att_rate }}%;"></div>
+          <div class="progress progress-corporate mb-2">
+            <div class="progress-bar {% if att_rate < 75 %}bg-danger{% else %}bg-success{% endif %}" style="width: {{ att_rate }}%;"></div>
           </div>
-          <small class="text-muted">Registered days: {{ total_att }}</small>
+          <span class="notice-meta">Registered days: {{ total_att }}</span>
         </div>
       </div>
 
-      <!-- Fees statement -->
-      <div class="col-12">
-        <div class="card shadow-sm border-0 p-3 bg-white">
-          <h6 class="text-muted small uppercase tracking-wider mb-2">Outstanding Fees</h6>
+      <div class="content-panel flex-grow-1">
+        <div class="panel-header py-2">
+          <h2 class="panel-title">Outstanding Fees</h2>
+        </div>
+        <div class="panel-body pt-0">
           {% if unpaid_invoices %}
             {% for inv in unpaid_invoices %}
-            <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+            <div class="fee-line">
               <div>
-                <span class="small fw-semibold text-dark">{{ inv.term.name }}</span>
-                <span class="d-block text-muted small">Due: ${{ inv.balance }}</span>
+                <div class="fee-line-title">{{ inv.term.name }}</div>
+                <div class="fee-line-amount">Due: K{{ inv.balance }}</div>
               </div>
-              <a href="{% url 'finance:invoice_detail' inv.pk %}" class="btn btn-sm btn-outline-secondary">Pay/Statement</a>
+              <a href="{% url 'finance:invoice_detail' inv.pk %}" class="btn btn-ghost btn-sm">View</a>
             </div>
             {% endfor %}
           {% else %}
-          <div class="text-success small py-2"><i class="bi bi-check-circle-fill"></i> All fees are fully paid! Thank you.</div>
+          <div class="text-success small py-2">
+            <i class="bi bi-check-circle-fill me-1"></i> All fees are fully paid. Thank you.
+          </div>
           {% endif %}
         </div>
       </div>
@@ -81,29 +92,31 @@
   </div>
 </div>
 
-<div class="row g-4 mt-2">
-  <!-- Notice Board Announcements -->
-  <div class="col-md-12">
-    <div class="card shadow-sm border-0 p-4">
-      <h5 class="fw-bold text-dark mb-3">Notice Board Announcements</h5>
-      <div class="list-group list-group-flush">
-        {% for notice in notices %}
-        <div class="list-group-item border-0 px-0 py-3">
-          <div class="d-flex w-100 justify-content-between">
-            <h6 class="fw-bold text-dark mb-1">{{ notice.title }}</h6>
-            <small class="text-muted">{{ notice.created_at|date:"M d, Y" }}</small>
-          </div>
-          <p class="text-secondary small mb-1">{{ notice.content }}</p>
-          <small class="text-muted">Posted by: {{ notice.author.get_full_name }}</small>
-        </div>
-        {% empty %}
-        <div class="text-center py-4 text-muted">
-          <i class="bi bi-megaphone fs-3 d-block mb-2 text-muted"></i>
-          No active announcements.
-        </div>
-        {% endfor %}
-      </div>
+<!-- Announcements -->
+<div class="content-panel">
+  <div class="panel-header">
+    <div>
+      <h2 class="panel-title">Notice Board</h2>
+      <p class="panel-subtitle">Announcements from your school</p>
     </div>
+    <span class="panel-icon bg-tone-violet"><i class="bi bi-megaphone"></i></span>
+  </div>
+  <div class="panel-body notice-feed">
+    {% for notice in notices %}
+    <div class="notice-item">
+      <div class="d-flex justify-content-between align-items-start gap-3">
+        <h3 class="notice-title">{{ notice.title }}</h3>
+        <span class="notice-meta text-nowrap">{{ notice.created_at|date:"M d, Y" }}</span>
+      </div>
+      <p class="notice-body">{{ notice.content }}</p>
+      <span class="notice-meta"><i class="bi bi-person me-1"></i>{{ notice.author.get_full_name }}</span>
+    </div>
+    {% empty %}
+    <div class="empty-state">
+      <i class="bi bi-megaphone"></i>
+      No active announcements.
+    </div>
+    {% endfor %}
   </div>
 </div>
 {% endblock %}
@@ -113,29 +126,46 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 $(document).ready(function() {
+  const primary = getComputedStyle(document.documentElement).getPropertyValue('--school-primary').trim() || '#2563eb';
+  const chartFont = { family: "'Outfit', sans-serif", size: 11 };
+
   const ctx = document.getElementById('studentPerformanceChart').getContext('2d');
   new Chart(ctx, {
     type: 'line',
     data: {
       labels: {{ subject_labels|safe }},
       datasets: [{
-        label: 'My Grade Scores',
+        label: 'My Scores',
         data: {{ subject_scores|safe }},
-        backgroundColor: 'rgba(54, 162, 235, 0.2)',
-        borderColor: 'rgba(54, 162, 235, 1)',
-        borderWidth: 2,
-        tension: 0.2,
-        fill: true
+        backgroundColor: primary + '22',
+        borderColor: primary,
+        borderWidth: 2.5,
+        tension: 0.35,
+        fill: true,
+        pointBackgroundColor: '#fff',
+        pointBorderColor: primary,
+        pointBorderWidth: 2,
+        pointRadius: 4,
+        pointHoverRadius: 6
       }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { titleFont: chartFont, bodyFont: chartFont }
+      },
       scales: {
+        x: {
+          grid: { display: false },
+          ticks: { font: chartFont, color: '#526071' }
+        },
         y: {
           beginAtZero: true,
           max: 100,
-          ticks: { stepSize: 20 }
+          ticks: { stepSize: 20, font: chartFont, color: '#526071' },
+          grid: { color: 'rgba(15, 23, 42, 0.06)', drawBorder: false }
         }
       }
     }

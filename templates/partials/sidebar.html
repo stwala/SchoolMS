@@ -2,7 +2,7 @@
 <ul class="nav flex-column nav-pills gap-1 px-2">
   <!-- DASHBOARD LINK -->
   <li class="nav-item">
-    <a class="nav-link d-flex align-items-center {% if request.path == '/' or '/dashboard/' in request.path %}active text-white bg-primary{% else %}text-dark{% endif %}" href="/">
+    <a class="nav-link d-flex align-items-center {% if request.path == '/' or request.path == '/dashboard/' or request.path == '/dashboard/admin/' or request.path == '/dashboard/teacher/' or request.path == '/dashboard/student/' or request.path == '/dashboard/parent/' %}active text-white bg-primary{% else %}text-dark{% endif %}" href="/">
       <i class="bi bi-speedometer2 me-2"></i> Dashboard
     </a>
   </li>
@@ -34,7 +34,7 @@
       </a>
     </li>
     <li class="nav-item">
-      <a class="nav-link ..." href="{% url 'dashboard:school_settings' %}">
+      <a class="nav-link d-flex align-items-center {% if '/dashboard/settings/' in request.path or '/settings/' in request.path %}active text-white bg-primary{% else %}text-dark{% endif %}" href="{% url 'dashboard:school_settings' %}">
         <i class="bi bi-gear me-2"></i> School Settings
       </a>
     </li>

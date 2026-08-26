@@ -2,108 +2,123 @@
 {% block title %}Admin Dashboard{% endblock %}
 
 {% block content %}
-<!-- Metric Cards Row -->
-<div class="row g-3 mb-4 animate-fade-in">
-  <div class="col-md-3">
-    <div class="card border-0 shadow-sm p-3 h-100 bg-white" style="border-left: 4px solid var(--bs-primary) !important;">
-      <div class="d-flex justify-content-between align-items-center">
+<div class="workspace-header">
+  <div>
+    <div class="workspace-kicker">Overview</div>
+    <h1 class="workspace-title">Admin Dashboard</h1>
+    <p class="workspace-subtitle">School-wide metrics, enrollment trends, fee collections, and quick administrative actions.</p>
+  </div>
+  <div class="workspace-actions">
+    <a href="{% url 'dashboard:notice_list' %}" class="btn btn-ghost btn-sm">
+      <i class="bi bi-megaphone me-1"></i> Notice Board
+    </a>
+  </div>
+</div>
+
+<!-- Key Metrics -->
+<div class="row g-3 mb-4 animate-stagger">
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card">
+      <div>
+        <div class="stat-label">Total Students</div>
+        <div class="stat-value">{{ students_count }}</div>
+        <div class="stat-note">Active enrollment</div>
+      </div>
+      <span class="stat-icon bg-tone-blue"><i class="bi bi-mortarboard"></i></span>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card accent-amber">
+      <div>
+        <div class="stat-label">Total Teachers</div>
+        <div class="stat-value">{{ teachers_count }}</div>
+        <div class="stat-note">Teaching staff</div>
+      </div>
+      <span class="stat-icon bg-tone-amber"><i class="bi bi-person-badge"></i></span>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card accent-teal">
+      <div>
+        <div class="stat-label">Fee Collections</div>
+        <div class="stat-value tone-teal">K{{ total_collected|stringformat:".2f" }}</div>
+        <div class="stat-note">Total collected</div>
+      </div>
+      <span class="stat-icon bg-tone-teal"><i class="bi bi-wallet2"></i></span>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card accent-rose">
+      <div>
+        <div class="stat-label">Outstanding Fees</div>
+        <div class="stat-value tone-rose">K{{ outstanding|stringformat:".2f" }}</div>
+        <div class="stat-note">Pending balances</div>
+      </div>
+      <span class="stat-icon bg-tone-rose"><i class="bi bi-exclamation-octagon"></i></span>
+    </div>
+  </div>
+</div>
+
+<!-- Charts -->
+<div class="row g-3 mb-4">
+  <div class="col-lg-8">
+    <div class="content-panel h-100">
+      <div class="panel-header">
         <div>
-          <h6 class="text-muted small uppercase tracking-wider mb-1">Total Students</h6>
-          <h3 class="fw-bold mb-0 text-dark">{{ students_count }}</h3>
+          <h2 class="panel-title">Student Enrollment by Class</h2>
+          <p class="panel-subtitle">Distribution of active students across class groups</p>
         </div>
-        <div class="rounded-circle bg-primary-subtle text-primary p-3">
-          <i class="bi bi-mortarboard fs-4"></i>
+        <span class="panel-icon bg-tone-blue"><i class="bi bi-bar-chart"></i></span>
+      </div>
+      <div class="panel-body">
+        <div class="chart-frame">
+          <canvas id="classSizesChart"></canvas>
         </div>
       </div>
     </div>
   </div>
-
-  <div class="col-md-3">
-    <div class="card border-0 shadow-sm p-3 h-100 bg-white" style="border-left: 4px solid var(--bs-warning) !important;">
-      <div class="d-flex justify-content-between align-items-center">
+  <div class="col-lg-4">
+    <div class="content-panel h-100">
+      <div class="panel-header">
         <div>
-          <h6 class="text-muted small uppercase tracking-wider mb-1">Total Teachers</h6>
-          <h3 class="fw-bold mb-0 text-dark">{{ teachers_count }}</h3>
+          <h2 class="panel-title">Payment Methods</h2>
+          <p class="panel-subtitle">Breakdown of fee collection channels</p>
         </div>
-        <div class="rounded-circle bg-warning-subtle text-warning p-3">
-          <i class="bi bi-person-badge fs-4 text-dark"></i>
-        </div>
+        <span class="panel-icon bg-tone-teal"><i class="bi bi-pie-chart"></i></span>
       </div>
-    </div>
-  </div>
-
-  <div class="col-md-3">
-    <div class="card border-0 shadow-sm p-3 h-100 bg-white" style="border-left: 4px solid var(--bs-success) !important;">
-      <div class="d-flex justify-content-between align-items-center">
-        <div>
-          <h6 class="text-muted small uppercase tracking-wider mb-1">Fee Collections</h6>
-          <h3 class="fw-bold mb-0 text-success">K{{ total_collected|stringformat:".2f" }}</h3>
-        </div>
-        <div class="rounded-circle bg-success-subtle text-success p-3">
-          <i class="bi bi-wallet2 fs-4"></i>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="col-md-3">
-    <div class="card border-0 shadow-sm p-3 h-100 bg-white" style="border-left: 4px solid var(--bs-danger) !important;">
-      <div class="d-flex justify-content-between align-items-center">
-        <div>
-          <h6 class="text-muted small uppercase tracking-wider mb-1">Outstanding Fees</h6>
-          <h3 class="fw-bold mb-0 text-danger">K{{ outstanding|stringformat:".2f" }}</h3>
-        </div>
-        <div class="rounded-circle bg-danger-subtle text-danger p-3">
-          <i class="bi bi-exclamation-octagon fs-4"></i>
+      <div class="panel-body">
+        <div class="chart-frame">
+          <canvas id="paymentsChart"></canvas>
         </div>
       </div>
     </div>
   </div>
 </div>
 
-<div class="row g-4">
-  <!-- Chart: Enrollment sizes -->
-  <div class="col-md-8">
-    <div class="card shadow-sm border-0 h-100 p-4">
-      <h5 class="fw-bold text-dark mb-4">Student Enrollment By Class</h5>
-      <div style="height: 300px; position: relative;">
-        <canvas id="classSizesChart"></canvas>
+<!-- Notices & Quick Actions -->
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="content-panel h-100">
+      <div class="panel-header">
+        <div>
+          <h2 class="panel-title">Announcements</h2>
+          <p class="panel-subtitle">Latest notices from the administration</p>
+        </div>
+        <a href="{% url 'dashboard:notice_list' %}" class="link-action">Manage board <i class="bi bi-arrow-right"></i></a>
       </div>
-    </div>
-  </div>
-
-  <!-- Chart: Payments breakdown -->
-  <div class="col-md-4">
-    <div class="card shadow-sm border-0 h-100 p-4">
-      <h5 class="fw-bold text-dark mb-4">Payment Methods Used</h5>
-      <div style="height: 300px; position: relative;">
-        <canvas id="paymentsChart"></canvas>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="row g-4 mt-2">
-  <!-- Notice Board Announcements -->
-  <div class="col-md-7">
-    <div class="card shadow-sm border-0 p-4 h-100">
-      <div class="d-flex justify-content-between align-items-center mb-3">
-        <h5 class="fw-bold text-dark mb-0">Admin Announcements Feed</h5>
-        <a href="{% url 'dashboard:notice_list' %}" class="btn btn-link btn-sm text-decoration-none">Manage Board</a>
-      </div>
-      <div class="list-group list-group-flush">
+      <div class="panel-body notice-feed">
         {% for notice in notices %}
-        <div class="list-group-item border-0 px-0 py-3">
-          <div class="d-flex w-100 justify-content-between">
-            <h6 class="fw-bold text-dark mb-1">{{ notice.title }}</h6>
-            <small class="text-muted">{{ notice.created_at|date:"M d, Y" }}</small>
+        <div class="notice-item">
+          <div class="d-flex justify-content-between align-items-start gap-3">
+            <h3 class="notice-title">{{ notice.title }}</h3>
+            <span class="notice-meta text-nowrap">{{ notice.created_at|date:"M d, Y" }}</span>
           </div>
-          <p class="text-secondary small mb-1">{{ notice.content|truncatewords:20 }}</p>
-          <small class="text-muted">Posted by: {{ notice.author.get_full_name }}</small>
+          <p class="notice-body">{{ notice.content|truncatewords:24 }}</p>
+          <span class="notice-meta"><i class="bi bi-person me-1"></i>{{ notice.author.get_full_name }}</span>
         </div>
         {% empty %}
-        <div class="text-center py-5 text-muted">
-          <i class="bi bi-megaphone fs-3 d-block mb-2 text-muted"></i>
+        <div class="empty-state">
+          <i class="bi bi-megaphone"></i>
           No active announcements.
         </div>
         {% endfor %}
@@ -111,29 +126,43 @@
     </div>
   </div>
 
-  <!-- Quick Tasks and Tools -->
-  <div class="col-md-5">
-    <div class="card shadow-sm border-0 p-4 h-100">
-      <h5 class="fw-bold text-dark mb-3">Quick Navigation Tools</h5>
-      <div class="row g-2">
-        <div class="col-6">
-          <a href="{% url 'people:student_create' %}" class="btn btn-outline-primary w-100 py-3 text-center d-flex flex-column align-items-center justify-content-center">
-            <i class="bi bi-person-plus fs-3 mb-1"></i> Add Student
-          </a>
+  <div class="col-lg-5">
+    <div class="content-panel h-100">
+      <div class="panel-header">
+        <div>
+          <h2 class="panel-title">Quick Actions</h2>
+          <p class="panel-subtitle">Common administrative tasks</p>
         </div>
-        <div class="col-6">
-          <a href="{% url 'attendance:attendance_record' %}" class="btn btn-outline-warning w-100 py-3 text-center d-flex flex-column align-items-center justify-content-center">
-            <i class="bi bi-calendar-check fs-3 mb-1"></i> Record Attendance
+      </div>
+      <div class="panel-body">
+        <div class="action-grid">
+          <a href="{% url 'people:student_create' %}" class="action-tile">
+            <span class="stat-icon bg-tone-blue"><i class="bi bi-person-plus"></i></span>
+            <span>
+              <span class="action-tile-title">Add Student</span>
+              <span class="action-tile-note">Register a new enrollee</span>
+            </span>
           </a>
-        </div>
-        <div class="col-6">
-          <a href="{% url 'finance:bulk_invoice' %}" class="btn btn-outline-success w-100 py-3 text-center d-flex flex-column align-items-center justify-content-center">
-            <i class="bi bi-credit-card-2-back fs-3 mb-1"></i> Bulk Invoicing
+          <a href="{% url 'attendance:attendance_record' %}" class="action-tile">
+            <span class="stat-icon bg-tone-amber"><i class="bi bi-calendar-check"></i></span>
+            <span>
+              <span class="action-tile-title">Attendance</span>
+              <span class="action-tile-note">Record daily presence</span>
+            </span>
           </a>
-        </div>
-        <div class="col-6">
-          <a href="{% url 'academics:grade_entry' %}" class="btn btn-outline-info w-100 py-3 text-center d-flex flex-column align-items-center justify-content-center">
-            <i class="bi bi-journal-check fs-3 mb-1"></i> Input Grades
+          <a href="{% url 'finance:bulk_invoice' %}" class="action-tile">
+            <span class="stat-icon bg-tone-teal"><i class="bi bi-credit-card-2-back"></i></span>
+            <span>
+              <span class="action-tile-title">Bulk Invoicing</span>
+              <span class="action-tile-note">Generate fee statements</span>
+            </span>
+          </a>
+          <a href="{% url 'academics:grade_entry' %}" class="action-tile">
+            <span class="stat-icon bg-tone-violet"><i class="bi bi-journal-check"></i></span>
+            <span>
+              <span class="action-tile-title">Input Grades</span>
+              <span class="action-tile-note">Enter term scores</span>
+            </span>
           </a>
         </div>
       </div>
@@ -146,7 +175,10 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 $(document).ready(function() {
-  // Class sizes Chart (Bar)
+  const primary = getComputedStyle(document.documentElement).getPropertyValue('--school-primary').trim() || '#2563eb';
+  const chartFont = { family: "'Outfit', sans-serif", size: 11 };
+  const gridColor = 'rgba(15, 23, 42, 0.06)';
+
   const ctx1 = document.getElementById('classSizesChart').getContext('2d');
   new Chart(ctx1, {
     type: 'bar',
@@ -155,25 +187,34 @@ $(document).ready(function() {
       datasets: [{
         label: 'Active Students',
         data: {{ class_sizes|safe }},
-        backgroundColor: 'rgba(54, 162, 235, 0.65)',
-        borderColor: 'rgba(54, 162, 235, 1)',
-        borderWidth: 1,
-        borderRadius: 4
+        backgroundColor: primary + '99',
+        borderColor: primary,
+        borderWidth: 0,
+        borderRadius: 6,
+        barThickness: 28,
       }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { titleFont: chartFont, bodyFont: chartFont }
+      },
       scales: {
+        x: {
+          grid: { display: false },
+          ticks: { font: chartFont, color: '#526071' }
+        },
         y: {
           beginAtZero: true,
-          ticks: { stepSize: 1 }
+          ticks: { stepSize: 1, font: chartFont, color: '#526071' },
+          grid: { color: gridColor, drawBorder: false }
         }
       }
     }
   });
 
-  // Payments Chart (Doughnut)
   const ctx2 = document.getElementById('paymentsChart').getContext('2d');
   new Chart(ctx2, {
     type: 'doughnut',
@@ -181,26 +222,21 @@ $(document).ready(function() {
       labels: {{ method_labels|safe }},
       datasets: [{
         data: {{ method_data|safe }},
-        backgroundColor: [
-          'rgba(75, 192, 192, 0.7)',
-          'rgba(255, 206, 86, 0.7)',
-          'rgba(153, 102, 255, 0.7)'
-        ],
-        borderColor: [
-          'rgba(75, 192, 192, 1)',
-          'rgba(255, 206, 86, 1)',
-          'rgba(153, 102, 255, 1)'
-        ],
-        borderWidth: 1
+        backgroundColor: ['#0f766e', '#2563eb', '#6d28d9', '#b45309'],
+        borderWidth: 0,
+        hoverOffset: 6
       }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      cutout: '62%',
       plugins: {
         legend: {
-          position: 'bottom'
-        }
+          position: 'bottom',
+          labels: { boxWidth: 10, padding: 14, font: chartFont, color: '#526071' }
+        },
+        tooltip: { titleFont: chartFont, bodyFont: chartFont }
       }
     }
   });
