@@ -55,7 +55,6 @@ class ClassNamingRuleForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         for field in self.fields.values():
             field.widget.attrs.setdefault('class', 'form-control')
-            field.widget.attrs['form'] = 'namingRuleForm'
         self.fields['naming_convention'].widget.attrs['class'] = 'form-select'
         self.fields['education_level'].widget.attrs['class'] = 'form-select'
         self.fields['ranking_method'].widget.attrs['class'] = 'form-select'

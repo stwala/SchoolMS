@@ -279,11 +279,44 @@
 
 
 
-<!-- Global CSRF configuration for jQuery AJAX -->
+<!-- Global CSRF configuration for jQuery AJAX & Graceful Toast Notifications -->
 <script>
   $.ajaxSetup({
     headers: { 'X-CSRFToken': '{{ csrf_token }}' }
   });
+
+  if (typeof toastr !== 'undefined') {
+    toastr.options = {
+      "closeButton": true,
+      "debug": false,
+      "newestOnTop": true,
+      "progressBar": true,
+      "positionClass": "toast-top-right",
+      "preventDuplicates": false,
+      "showDuration": "300",
+      "hideDuration": "800",
+      "timeOut": "4500",
+      "extendedTimeOut": "1000",
+      "showEasing": "swing",
+      "hideEasing": "linear",
+      "showMethod": "fadeIn",
+      "hideMethod": "fadeOut"
+    };
+
+    {% if messages %}
+      {% for msg in messages %}
+        {% if msg.tags == 'success' %}
+          toastr.success("{{ msg|escapejs }}");
+        {% elif msg.tags == 'error' or msg.tags == 'danger' %}
+          toastr.error("{{ msg|escapejs }}");
+        {% elif msg.tags == 'warning' %}
+          toastr.warning("{{ msg|escapejs }}");
+        {% else %}
+          toastr.info("{{ msg|escapejs }}");
+        {% endif %}
+      {% endfor %}
+    {% endif %}
+  }
 </script>
 
 {% block extra_js %}{% endblock %}

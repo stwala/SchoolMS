@@ -1,6 +1,8 @@
 from django import forms
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Submit, Row, Column
+
+from apps.dashboard.models import ClassNamingRule
 from .models import AcademicSession, AcademicTerm, Subject, StudentClass, Grade,StudentTermReport, AcademicEvent
 
 class AcademicSessionForm(forms.ModelForm):
@@ -57,6 +59,18 @@ class StudentClassForm(forms.ModelForm):
             'subjects': forms.CheckboxSelectMultiple(attrs={'class': 'subject-checkboxes'}),
         }
 
+    def clean_grade_level(self):
+        grade = self.cleaned_data.get('grade_level')
+
+        if not ClassNamingRule.for_grade(grade):
+            raise forms.ValidationError(
+                f"Grade {grade} cannot be added because no "
+                f"class naming rule has been configured for it. "
+                f"Please configure the naming rule in School Settings first."
+            )
+
+        return grade
+    
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.helper = FormHelper()

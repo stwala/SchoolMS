@@ -251,13 +251,28 @@
                         <td>{{ rule.get_education_level_display }}</td>
                         <td>{{ rule.get_ranking_method_display }}</td>
                         <td class="text-end">
-                          <button type="submit"
-                                  class="btn btn-outline-danger btn-sm"
-                                  formmethod="post"
-                                  formaction="{% url 'dashboard:naming_rule_delete' rule.pk %}"
-                                  onclick="return confirm('Delete this naming rule?');">
-                            <i class="bi bi-trash"></i>
+                          <button type="button"
+                                  class="btn btn-outline-primary btn-sm edit-rule-btn me-1"
+                                  data-id="{{ rule.pk }}"
+                                  data-from="{{ rule.from_grade }}"
+                                  data-to="{{ rule.to_grade }}"
+                                  data-convention="{{ rule.naming_convention }}"
+                                  data-custom="{{ rule.custom_name|default:'' }}"
+                                  data-level="{{ rule.education_level }}"
+                                  data-ranking="{{ rule.ranking_method }}"
+                                  data-action="{% url 'dashboard:naming_rule_edit' rule.pk %}"
+                                  title="Edit Rule">
+                            <i class="bi bi-pencil"></i>
                           </button>
+                          <form method="post" action="{% url 'dashboard:naming_rule_delete' rule.pk %}" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit"
+                                    class="btn btn-outline-danger btn-sm"
+                                    onclick="return confirm('Delete this naming rule?');"
+                                    title="Delete Rule">
+                              <i class="bi bi-trash"></i>
+                            </button>
+                          </form>
                         </td>
                       </tr>
                     {% empty %}
@@ -548,6 +563,90 @@
     tabButton.addEventListener('shown.bs.tab', syncSaveButton);
   });
   syncSaveButton();
+
+  // Edit Naming Rule Modal Populate
+  document.querySelectorAll('.edit-rule-btn').forEach(btn => {
+    btn.addEventListener('click', function () {
+      const form = document.getElementById('editNamingRuleForm');
+      if (!form) return;
+      form.action = this.dataset.action;
+      document.getElementById('edit_from_grade').value = this.dataset.from || '';
+      document.getElementById('edit_to_grade').value = this.dataset.to || '';
+      document.getElementById('edit_naming_convention').value = this.dataset.convention || 'grade';
+      document.getElementById('edit_custom_name').value = this.dataset.custom || '';
+      document.getElementById('edit_education_level').value = this.dataset.level || 'primary';
+      document.getElementById('edit_ranking_method').value = this.dataset.ranking || 'marks';
+
+      const modalEl = document.getElementById('editNamingRuleModal');
+      if (modalEl) {
+        const modal = new bootstrap.Modal(modalEl);
+        modal.show();
+      }
+    });
+  });
 })();
 </script>
+
+<!-- Edit Class Naming Rule Modal -->
+<div class="modal fade" id="editNamingRuleModal" tabindex="-1" aria-labelledby="editNamingRuleModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+      <div class="modal-header border-0 bg-primary-subtle">
+        <h5 class="modal-title fw-bold text-primary" id="editNamingRuleModalLabel">
+          <i class="bi bi-pencil-square me-2"></i>Edit Class Naming Rule
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="editNamingRuleForm" method="post">
+        {% csrf_token %}
+        <div class="modal-body p-4">
+          <div class="row g-3">
+            <div class="col-md-3">
+              <label class="form-label fw-semibold small">From Grade</label>
+              <input type="number" name="from_grade" id="edit_from_grade" class="form-control" required min="1" max="12">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold small">To Grade</label>
+              <input type="number" name="to_grade" id="edit_to_grade" class="form-control" required min="1" max="12">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold small">Naming Convention</label>
+              <select name="naming_convention" id="edit_naming_convention" class="form-select" required>
+                <option value="grade">Grade (e.g. Grade 1)</option>
+                <option value="standard">Standard (e.g. Standard 1)</option>
+                <option value="form">Form (e.g. Form 1)</option>
+                <option value="custom">Custom Name</option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold small">Custom Name</label>
+              <input type="text" name="custom_name" id="edit_custom_name" class="form-control" placeholder="Optional">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">Education Level</label>
+              <select name="education_level" id="edit_education_level" class="form-select" required>
+                <option value="primary">Primary</option>
+                <option value="junior">Junior Secondary</option>
+                <option value="secondary">Senior Secondary</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold small">Ranking Method</label>
+              <select name="ranking_method" id="edit_ranking_method" class="form-select" required>
+                <option value="marks">Total Marks</option>
+                <option value="points">Points</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary px-4">
+            <i class="bi bi-save me-1"></i> Save Changes
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 {% endblock %}

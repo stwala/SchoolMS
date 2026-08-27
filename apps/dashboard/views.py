@@ -556,3 +556,38 @@ def naming_rule_delete(request, pk):
     naming_rule.delete()
     messages.success(request, 'Class naming rule deleted successfully.')
     return redirect(f"{reverse('dashboard:school_settings')}?tab=naming")
+
+@login_required
+@admin_required
+def naming_rule_edit(request, pk):
+    settings = SchoolSettings.get()
+    rule = get_object_or_404(ClassNamingRule, pk=pk, school_settings=settings)
+
+    if request.method == 'POST':
+        form = ClassNamingRuleForm(request.POST, instance=rule)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Class naming rule updated successfully.')
+            return redirect(f"{reverse('dashboard:school_settings')}?tab=naming")
+        else:
+            messages.error(request, 'Failed to update class naming rule. Please check inputs.')
+            return render(
+                request,
+                'dashboard/school_settings.html',
+                _school_settings_context(settings, naming_rule_form=form, active_tab='naming'),
+            )
+
+    form = ClassNamingRuleForm(instance=rule)
+    return render(
+        request,
+        'dashboard/school_settings.html',
+        _school_settings_context(settings, naming_rule_form=form, active_tab='naming'),
+    )
+
+
+def custom_handler404(request, exception=None):
+    return render(request, '404.html', status=404)
+
+
+def custom_handler500(request):
+    return render(request, '500.html', status=500)

@@ -30,3 +30,6 @@ urlpatterns = [
     path('', include('apps.dashboard.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
+handler404 = 'apps.dashboard.views.custom_handler404'
+handler500 = 'apps.dashboard.views.custom_handler500'
+
