@@ -1,7 +1,7 @@
 from django import forms
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Submit, Row, Column
-from .models import AcademicSession, AcademicTerm, Subject, StudentClass, Grade,StudentTermReport, TRAIT_CHOICES
+from .models import AcademicSession, AcademicTerm, Subject, StudentClass, Grade,StudentTermReport, AcademicEvent
 
 class AcademicSessionForm(forms.ModelForm):
     class Meta:
@@ -88,3 +88,108 @@ class StudentTermReportForm(forms.ModelForm):
         widgets = {
             'teacher_comment': forms.Textarea(attrs={'rows': 3}),
         }
+
+
+
+
+
+class AcademicEventForm(forms.ModelForm):
+
+    class Meta:
+        model = AcademicEvent
+
+        fields = [
+            'title',
+            'event_type',
+            'start_date',
+            'end_date',
+            'description',
+            'session',
+            'term',
+            'is_active',
+        ]
+
+        widgets = {
+            'start_date': forms.DateInput(
+                attrs={'type': 'date'}
+            ),
+
+            'end_date': forms.DateInput(
+                attrs={'type': 'date'}
+            ),
+
+            'description': forms.Textarea(
+                attrs={
+                    'rows': 4,
+                    'placeholder': 'Describe this event...'
+                }
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.helper = FormHelper()
+
+        self.helper.layout = Layout(
+
+            'title',
+
+            Row(
+                Column(
+                    'event_type',
+                    css_class='col-md-6'
+                ),
+
+                Column(
+                    'is_active',
+                    css_class='col-md-6'
+                ),
+            ),
+
+            Row(
+                Column(
+                    'start_date',
+                    css_class='col-md-6'
+                ),
+
+                Column(
+                    'end_date',
+                    css_class='col-md-6'
+                ),
+            ),
+
+            Row(
+                Column(
+                    'session',
+                    css_class='col-md-6'
+                ),
+
+                Column(
+                    'term',
+                    css_class='col-md-6'
+                ),
+            ),
+
+            'description',
+
+            Submit(
+                'submit',
+                'Save Event',
+                css_class='btn btn-primary'
+            )
+        )
+
+    def clean(self):
+
+        cleaned_data = super().clean()
+
+        start = cleaned_data.get('start_date')
+        end = cleaned_data.get('end_date')
+
+        if start and end and end < start:
+            raise forms.ValidationError(
+                "End date cannot be before the start date."
+            )
+
+        return cleaned_data

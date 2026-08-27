@@ -44,6 +44,12 @@ def admin_dashboard(request):
     # Notices
     notices = Notice.objects.filter(is_active=True, to_admins=True)[:5]
 
+    # Academic Events & Calendar
+    from apps.academics.models import AcademicEvent
+    all_events = AcademicEvent.objects.filter(is_active=True).order_by('start_date')
+    upcoming_events = [e for e in all_events if not e.is_past()][:6]
+    next_event = upcoming_events[0] if upcoming_events else None
+
     # Chart.js Data: Class sizes
     classes = StudentClass.objects.all()
     class_labels = [c.name for c in classes]
@@ -63,6 +69,8 @@ def admin_dashboard(request):
         'total_collected': total_collected,
         'outstanding': outstanding,
         'notices': notices,
+        'upcoming_events': upcoming_events,
+        'next_event': next_event,
         'class_labels': class_labels,
         'class_sizes': class_sizes,
         'method_labels': method_labels,

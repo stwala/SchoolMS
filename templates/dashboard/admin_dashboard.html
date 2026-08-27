@@ -9,11 +9,49 @@
     <p class="workspace-subtitle">School-wide metrics, enrollment trends, fee collections, and quick administrative actions.</p>
   </div>
   <div class="workspace-actions">
+    <a href="{% url 'academics:event_list' %}" class="btn btn-outline-primary btn-sm me-1">
+      <i class="bi bi-calendar-event me-1"></i> Academic Calendar
+    </a>
     <a href="{% url 'dashboard:notice_list' %}" class="btn btn-ghost btn-sm">
       <i class="bi bi-megaphone me-1"></i> Notice Board
     </a>
   </div>
 </div>
+
+{% if next_event %}
+<!-- Next Event Countdown Banner -->
+<div class="alert border-0 shadow-sm mb-4 d-flex flex-wrap align-items-center justify-content-between p-3 rounded-3 text-white animate-fade-in"
+     style="background: linear-gradient(135deg, var(--school-primary) 0%, var(--school-secondary) 100%);">
+  <div class="d-flex align-items-center gap-3">
+    <div class="rounded-circle bg-white bg-opacity-25 p-2 d-flex align-items-center justify-content-center" style="width: 44px; height: 44px; flex-shrink: 0;">
+      <i class="bi bi-calendar-event fs-4 text-white"></i>
+    </div>
+    <div>
+      <div class="d-flex align-items-center gap-2 mb-1">
+        <span class="badge bg-white text-dark fw-bold uppercase" style="font-size: 0.7rem;">{{ next_event.get_event_type_display }}</span>
+        {% if next_event.is_ongoing %}
+          <span class="badge bg-success fw-bold text-white">ONGOING TODAY</span>
+        {% else %}
+          <span class="badge bg-warning text-dark fw-bold">
+            {% if next_event.days_until == 0 %}TODAY{% elif next_event.days_until == 1 %}IN 1 DAY{% else %}IN {{ next_event.days_until }} DAYS{% endif %}
+          </span>
+        {% endif %}
+      </div>
+      <h6 class="fw-bold text-white mb-0">
+        Next Event: {{ next_event.title }}
+        {% if next_event.end_date and next_event.end_date != next_event.start_date %}
+          <span class="fw-normal opacity-90">({{ next_event.start_date|date:"M d" }} — {{ next_event.end_date|date:"M d, Y" }})</span>
+        {% else %}
+          <span class="fw-normal opacity-90">({{ next_event.start_date|date:"M d, Y" }})</span>
+        {% endif %}
+      </h6>
+    </div>
+  </div>
+  <a href="{% url 'academics:event_list' %}" class="btn btn-sm btn-light bg-white text-dark fw-bold px-3 py-1.5 rounded-2 mt-2 mt-sm-0">
+    <i class="bi bi-calendar3 me-1"></i>View Calendar
+  </a>
+</div>
+{% endif %}
 
 <!-- Key Metrics -->
 <div class="row g-3 mb-4 animate-stagger">
@@ -59,14 +97,14 @@
   </div>
 </div>
 
-<!-- Charts -->
+<!-- Charts & Calendar Strip -->
 <div class="row g-3 mb-4">
   <div class="col-lg-8">
     <div class="content-panel h-100">
       <div class="panel-header">
         <div>
-          <h2 class="panel-title">Student Enrollment by Class</h2>
-          <p class="panel-subtitle">Distribution of active students across class groups</p>
+          <h2 class="panel-title">Student Enrollment</h2>
+          <p class="panel-subtitle">Active headcount across all classes</p>
         </div>
         <span class="panel-icon bg-tone-blue"><i class="bi bi-bar-chart"></i></span>
       </div>

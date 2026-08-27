@@ -1,5 +1,3 @@
-
-
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -458,7 +456,7 @@ def student_report_card(request, student_id):
         term_report = StudentTermReport.objects.filter(
             student=student, session=active_session, term=active_term
         ).first()
-        
+
     context = {
         'student': student,
         'grades': grades,
@@ -546,7 +544,7 @@ def student_report_card(request, student_id):
 #         'student'        : student,
 #         'active_session' : active_session,
 #         'active_term'       : active_term,                          # ← add
-#         'active_term_id'    : active_term.pk if active_term else None, 
+#         'active_term_id'    : active_term.pk if active_term else None,
 #         'all_terms'      : all_terms,
 #         'subjects'       : subjects,
 #         'grade_matrix'   : grade_matrix,
@@ -1106,3 +1104,95 @@ def export_ranking_pdf(request):
     document.build(elements)
 
     return response
+
+
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import get_object_or_404, redirect, render
+
+from .models import AcademicEvent
+from .forms import AcademicEventForm
+
+
+@login_required
+def event_list(request):
+
+    events = AcademicEvent.objects.filter(is_active=True)
+
+    search = request.GET.get("search", "").strip()
+    event_type = request.GET.get("event_type", "")
+
+    if search:
+        events = events.filter(title__icontains=search)
+
+    if event_type:
+        events = events.filter(event_type=event_type)
+
+    context = {
+        "events": events,
+        "event_types": AcademicEvent.EVENT_TYPES,
+        "search": search,
+        "selected_type": event_type,
+    }
+
+    return render(request, "academics/events/event_list.html", context)
+
+
+@login_required
+def event_create(request):
+
+    if request.method == "POST":
+
+        form = AcademicEventForm(request.POST)
+
+        if form.is_valid():
+
+            form.save()
+
+            messages.success(request, "Academic event created successfully.")
+
+            return redirect("academics:event_list")
+
+    else:
+        form = AcademicEventForm()
+
+    return render(request, "academics/events/event_form.html", {"form": form})
+
+
+@login_required
+def event_update(request, pk):
+
+    event = get_object_or_404(AcademicEvent, pk=pk)
+
+    if request.method == "POST":
+
+        form = AcademicEventForm(request.POST, instance=event)
+
+        if form.is_valid():
+
+            form.save()
+
+            messages.success(request, "Academic event updated successfully.")
+
+            return redirect("academics:event_list")
+
+    else:
+        form = AcademicEventForm(instance=event)
+
+    return render(
+        request, "academics/events/event_form.html", {"form": form, "event": event}
+    )
+
+
+@login_required
+def event_delete(request, pk):
+
+    event = get_object_or_404(AcademicEvent, pk=pk)
+
+    if request.method == "POST":
+
+        event.delete()
+
+        messages.success(request, "Academic event deleted.")
+
+    return redirect("academics:event_list")

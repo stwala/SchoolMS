@@ -64,6 +64,11 @@
       </a>
     </li>
     <li class="nav-item">
+      <a class="nav-link d-flex align-items-center {% if '/academics/events/' in request.path %}active text-white bg-primary{% else %}text-dark{% endif %}" href="{% url 'academics:event_list' %}">
+        <i class="bi bi-calendar3 me-2"></i> Academic Calendar
+      </a>
+    </li>
+    <li class="nav-item">
       <a class="nav-link d-flex align-items-center {% if '/academics/grades/' in request.path %}active text-white bg-primary{% else %}text-dark{% endif %}" href="{% url 'academics:grade_entry' %}">
         <i class="bi bi-journal-check me-2"></i> Grade Sheet
       </a>

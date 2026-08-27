@@ -1,6 +1,8 @@
 from django.db import models
 from apps.dashboard.models import ClassNamingRule
 
+from django.utils import timezone
+
 class AcademicSession(models.Model):
     """Academic Session (e.g. 2025/2026)"""
     name = models.CharField(max_length=100, unique=True)
@@ -176,3 +178,95 @@ class StudentTermReport(models.Model):
 
     def __str__(self):
         return f"{self.student} — {self.term} {self.session}"
+
+
+class AcademicEvent(models.Model):
+
+    EVENT_TYPES = [
+        ('exam', 'Exam'),
+        ('holiday', 'Holiday'),
+        ('term_start', 'Term Start'),
+        ('term_end', 'Term End'),
+        ('meeting', 'Meeting'),
+        ('sports', 'Sports'),
+        ('general', 'General'),
+    ]
+
+    title = models.CharField(max_length=200)
+
+    event_type = models.CharField(max_length=20, choices=EVENT_TYPES, default="general")
+
+    start_date = models.DateField()
+
+    end_date = models.DateField(blank=True, null=True)
+
+    description = models.TextField(blank=True)
+
+    session = models.ForeignKey(
+        AcademicSession,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="events",
+    )
+
+    term = models.ForeignKey(
+        AcademicTerm,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="events",
+    )
+
+    is_active = models.BooleanField(
+        default=True
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
+
+    class Meta:
+        ordering = ['start_date']
+
+    def __str__(self):
+        return self.title
+
+    @property
+    def effective_end_date(self):
+        return self.end_date or self.start_date
+
+    def is_ongoing(self):
+        today = timezone.localdate()
+
+        return (
+            self.start_date <= today <= self.effective_end_date
+        )
+
+    def is_past(self):
+        return self.effective_end_date < timezone.localdate()
+
+    def is_upcoming(self):
+        return self.start_date > timezone.localdate()
+
+    def days_until(self):
+        today = timezone.localdate()
+
+        if self.is_ongoing():
+            return 0
+
+        return (self.start_date - today).days
+
+    def status(self):
+
+        if self.is_ongoing():
+            return 'ongoing'
+
+        if self.is_past():
+            return 'past'
+
+        return 'upcoming'
