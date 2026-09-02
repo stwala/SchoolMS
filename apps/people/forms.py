@@ -3,6 +3,7 @@ from datetime import date
 from django import forms
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Submit, Row, Column
+from django.db import transaction
 from apps.accounts.models import User
 from apps.accounts.forms import UserCreateForm
 from .models import Student, Teacher, Parent
@@ -111,6 +112,8 @@ class StudentBulkUploadForm(forms.Form):
         raise ValueError(f'Unrecognised date format: "{value}". Use DD/MM/YYYY or YYYY-MM-DD.')
 
 
+    
+
     def process(self):
         """Call this in the view after is_valid(). Returns list of result dicts."""
         f = self.cleaned_data['file']
@@ -128,81 +131,90 @@ class StudentBulkUploadForm(forms.Form):
             for row in ws.iter_rows(min_row=2, values_only=True):
                 rows.append(dict(zip(headers, row)))
 
+        from apps.academics.models import StudentClass
+
+        # ── Prefetch everything once, instead of querying per row ──
+        existing_usernames = set(User.objects.values_list('username', flat=True))
+        existing_admission_nos = set(Student.objects.values_list('admission_no', flat=True))
+        class_lookup = {c.name.lower(): c for c in StudentClass.objects.all()}
+
         results = []
-        for i, row in enumerate(rows, start=2):
-            try:
-                first_name   = str(row.get('first_name') or '').strip()
-                last_name    = str(row.get('last_name') or '').strip()
-                username     = str(row.get('username') or '').strip()
-                admission_no = str(row.get('admission_no') or '').strip()
-                raw_dob = str(row.get('date_of_birth') or '').strip()
+
+        # ── One transaction for the whole batch — huge win on SQLite,
+        #    which otherwise fsyncs on every individual save(). ──
+        with transaction.atomic():
+            for i, row in enumerate(rows, start=2):
                 try:
-                    dob = self._parse_date(raw_dob)
-                except ValueError as e:
-                    results.append({'row': i, 'status': 'error', 'msg': str(e)})
-                    continue
-                gender       = str(row.get('gender') or '').strip().upper()
-                password     = str(row.get('password') or 'changeme123').strip()
-                blood_group  = str(row.get('blood_group') or '').strip() or None
-                address      = str(row.get('address') or '').strip()
-                class_name   = str(row.get('class') or '').strip()
+                    first_name   = str(row.get('first_name') or '').strip()
+                    last_name    = str(row.get('last_name') or '').strip()
+                    username     = str(row.get('username') or '').strip()
+                    admission_no = str(row.get('admission_no') or '').strip()
+                    raw_dob = str(row.get('date_of_birth') or '').strip()
+                    try:
+                        dob = self._parse_date(raw_dob)
+                    except ValueError as e:
+                        results.append({'row': i, 'status': 'error', 'msg': str(e)})
+                        continue
+                    gender       = str(row.get('gender') or '').strip().upper()
+                    password     = str(row.get('password') or 'changeme123').strip()
+                    blood_group  = str(row.get('blood_group') or '').strip() or None
+                    address      = str(row.get('address') or '').strip()
+                    class_name   = str(row.get('class') or '').strip()
 
-                # Validate required fields
-                if not all([first_name, last_name, username, admission_no, dob, gender]):
-                    results.append({'row': i, 'status': 'error',
-                                    'msg': 'Missing required field(s).'})
-                    continue
-
-                if gender not in ('M', 'F'):
-                    results.append({'row': i, 'status': 'error',
-                                    'msg': f'Invalid gender "{gender}". Use M or F.'})
-                    continue
-
-                if User.objects.filter(username=username).exists():
-                    results.append({'row': i, 'status': 'skip',
-                                    'msg': f'Username "{username}" already exists.'})
-                    continue
-
-                if Student.objects.filter(admission_no=admission_no).exists():
-                    results.append({'row': i, 'status': 'skip',
-                                    'msg': f'Admission no "{admission_no}" already exists.'})
-                    continue
-
-                # Resolve class
-                student_class = None
-                if class_name:
-                    from apps.academics.models import StudentClass
-                    student_class = StudentClass.objects.filter(
-                        name__iexact=class_name
-                    ).first()
-                    if not student_class:
+                    if not all([first_name, last_name, username, admission_no, dob, gender]):
                         results.append({'row': i, 'status': 'error',
-                                        'msg': f'Class "{class_name}" not found.'})
+                                        'msg': 'Missing required field(s).'})
                         continue
 
-                # Create user and student
-                u = User(role='student', first_name=first_name,
-                         last_name=last_name, username=username)
-                u.set_password(password)
-                u.save()
+                    if gender not in ('M', 'F'):
+                        results.append({'row': i, 'status': 'error',
+                                        'msg': f'Invalid gender "{gender}". Use M or F.'})
+                        continue
 
-                Student.objects.create(
-                    user=u,
-                    admission_no=admission_no,
-                    date_of_birth=dob,
-                    gender=gender,
-                    blood_group=blood_group,
-                    address=address,
-                    student_class=student_class,
-                )
-                results.append({'row': i, 'status': 'ok',
-                                'msg': f'{first_name} {last_name} created.'})
+                    if username in existing_usernames:
+                        results.append({'row': i, 'status': 'skip',
+                                        'msg': f'Username "{username}" already exists.'})
+                        continue
 
-            except Exception as e:
-                results.append({'row': i, 'status': 'error', 'msg': str(e)})
+                    if admission_no in existing_admission_nos:
+                        results.append({'row': i, 'status': 'skip',
+                                        'msg': f'Admission no "{admission_no}" already exists.'})
+                        continue
+
+                    student_class = None
+                    if class_name:
+                        student_class = class_lookup.get(class_name.lower())
+                        if not student_class:
+                            results.append({'row': i, 'status': 'error',
+                                            'msg': f'Class "{class_name}" not found.'})
+                            continue
+
+                    u = User(role='student', first_name=first_name,
+                            last_name=last_name, username=username)
+                    u.set_password(password)
+                    u.save()
+
+                    Student.objects.create(
+                        user=u,
+                        admission_no=admission_no,
+                        date_of_birth=dob,
+                        gender=gender,
+                        blood_group=blood_group,
+                        address=address,
+                        student_class=student_class,
+                    )
+                    results.append({'row': i, 'status': 'ok',
+                                    'msg': f'{first_name} {last_name} created.'})
+
+                    # Track newly created ones so duplicate rows within
+                    # the same file are also caught
+                    existing_usernames.add(username)
+                    existing_admission_nos.add(admission_no)
+
+                except Exception as e:
+                    results.append({'row': i, 'status': 'error', 'msg': str(e)})
 
         return results
-
 
 class TeacherForm(forms.ModelForm):
     first_name    = forms.CharField(max_length=150)

@@ -23,4 +23,5 @@ urlpatterns = [
     path('settings/naming-rule/add/', views.naming_rule_add, name='naming_rule_add'),
     path('settings/naming-rule/<int:pk>/edit/', views.naming_rule_edit, name='naming_rule_edit'),
     path('settings/naming-rule/<int:pk>/delete/', views.naming_rule_delete, name='naming_rule_delete'),
+    path('class-performance-data/', views.class_performance_data, name='class_performance_data'),
 ]

@@ -368,7 +368,23 @@ $(document).ready(function () {
       $('#gradeModalError').removeClass('d-none').text('Failed to load student data. Please try again.');
     });
   });
+  
+  // ── Score input behaviour ──
+  $(document).on('focus', '.test-input, .exam-input', function () {
 
+      if ($(this).val() === '0') {
+          this.select();
+      }
+
+  });
+
+  $(document).on('click', '.test-input, .exam-input', function () {
+
+      if ($(this).val() === '0') {
+          this.select();
+      }
+
+  });
   // ── Live score calculation ──
   $(document).on('input', '.test-input, .exam-input', function () {
     const subjectId = $(this).data('subject');

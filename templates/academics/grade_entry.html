@@ -191,17 +191,107 @@ $(document).ready(function() {
     return { letter: 'F', remark: 'Fail' };
   }
 
-  $('.test-score-input, .exam-score-input').on('input', function() {
-    const row = $(this).closest('tr');
-    const testVal = parseInt(row.find('.test-score-input').val()) || 0;
-    const examVal = parseInt(row.find('.exam-score-input').val()) || 0;
-    const total = testVal + examVal;
-    
-    row.find('.total-score-cell').text(total);
-    const gr = calculateGrade(total);
-    row.find('.grade-cell').html(`<span class="badge bg-secondary">${gr.letter}</span>`);
-    row.find('.remark-cell').text(gr.remark);
-  });
+   $(document).on(
+        'focus',
+        '.test-score-input, .exam-score-input',
+        function() {
+
+            if ($(this).val() === '0') {
+                this.select();
+            }
+
+        }
+    );
+
+
+    // Also select 0 when clicked
+    $(document).on(
+        'click',
+        '.test-score-input, .exam-score-input',
+        function() {
+
+            if ($(this).val() === '0') {
+                this.select();
+            }
+
+        }
+    );
+
+ // ─────────────────────────────────────────────
+// SCORE LIMITS
+// ─────────────────────────────────────────────
+
+$(document).on(
+    'input',
+    '.test-score-input, .exam-score-input',
+    function() {
+
+        const input = $(this);
+
+        // Determine maximum based on input type
+        const max = input.hasClass('test-score-input')
+            ? 40
+            : 60;
+
+        let value = parseInt(input.val()) || 0;
+
+        // Prevent negative values
+        if (value < 0) {
+            value = 0;
+        }
+
+        // Prevent values above maximum
+        if (value > max) {
+            value = max;
+        }
+
+        // Put corrected value back into input
+        input.val(value);
+
+
+        // Get current row
+        const row = input.closest('tr');
+
+
+        // Get test and exam scores
+        const testVal =
+            parseInt(
+                row.find('.test-score-input').val()
+            ) || 0;
+
+        const examVal =
+            parseInt(
+                row.find('.exam-score-input').val()
+            ) || 0;
+
+
+        // Calculate total
+        const total = testVal + examVal;
+
+
+        // Update total
+        row.find('.total-score-cell').text(total);
+
+
+        // Calculate grade
+        const gr = calculateGrade(total);
+
+
+        // Update grade
+        row.find('.grade-cell').html(
+            `<span class="badge bg-secondary">
+                ${gr.letter}
+            </span>`
+        );
+
+
+        // Update remark
+        row.find('.remark-cell').text(
+            gr.remark
+        );
+
+    }
+);
 });
 </script>
 {% endblock %}

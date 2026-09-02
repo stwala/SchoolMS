@@ -1,3 +1,5 @@
+from django.db.models import F, ExpressionWrapper,Avg
+from django.db.models.fields import FloatField
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -22,6 +24,234 @@ def index(request):
             return redirect('accounts:profile')
         return redirect(dash_url)
     return redirect('accounts:login')
+
+
+@login_required
+@admin_required
+def class_performance_data(request):
+    """
+    Return current vs previous academic year performance.
+
+    Default:
+        Overall performance for all classes.
+
+    If ?class_id=<id> is supplied:
+        Detailed performance for the selected class by term.
+    """
+
+    # ---------------------------------------------------------
+    # CURRENT ACADEMIC SESSION
+    # ---------------------------------------------------------
+
+    current_session = AcademicSession.objects.filter(current=True).first()
+
+    if not current_session:
+        return JsonResponse(
+            {"error": "No current academic session has been configured."}, status=400
+        )
+
+    # ---------------------------------------------------------
+    # PREVIOUS ACADEMIC SESSION
+    # ---------------------------------------------------------
+
+    previous_session = (
+        AcademicSession.objects.exclude(pk=current_session.pk).order_by("-id").first()
+    )
+
+    # ---------------------------------------------------------
+    # GET ALL CLASSES
+    # ---------------------------------------------------------
+
+    classes = StudentClass.objects.all().order_by("grade_level", "name")
+
+    # ---------------------------------------------------------
+    # CHECK IF A SPECIFIC CLASS WAS SELECTED
+    # ---------------------------------------------------------
+
+    class_id = request.GET.get("class_id")
+
+    selected_class = None
+
+    if class_id:
+
+        try:
+            selected_class = StudentClass.objects.get(pk=class_id)
+
+        except StudentClass.DoesNotExist:
+            return JsonResponse({"error": "Selected class does not exist."}, status=404)
+
+    # ---------------------------------------------------------
+    # PERFORMANCE EXPRESSION
+    # ---------------------------------------------------------
+
+    total_score = ExpressionWrapper(
+        F("test_score") + F("exam_score"), output_field=FloatField()
+    )
+
+    # =========================================================
+    # MODE 1: SPECIFIC CLASS SELECTED
+    # =========================================================
+
+    if selected_class:
+
+        current_terms = list(
+            AcademicTerm.objects.filter(session=current_session).order_by("id")
+        )
+
+        previous_terms = (
+            list(AcademicTerm.objects.filter(session=previous_session).order_by("id"))
+            if previous_session
+            else []
+        )
+
+        current_data = []
+
+        for term in current_terms:
+
+            average = (
+                Grade.objects.filter(
+                    session=current_session,
+                    term=term,
+                    student_class=selected_class,
+                )
+                .aggregate(average=Avg(total_score))
+                .get("average")
+            )
+
+            current_data.append(
+                round(float(average), 2) if average is not None else None
+            )
+
+        previous_data = []
+
+        for term in previous_terms:
+
+            average = (
+                Grade.objects.filter(
+                    session=previous_session,
+                    term=term,
+                    student_class__grade_level=selected_class.grade_level,
+                )
+                .aggregate(average=Avg(total_score))
+                .get("average")
+            )
+
+            previous_data.append(
+                round(float(average), 2) if average is not None else None
+            )
+
+        # Make sure both datasets have the same length
+
+        labels = [term.name for term in current_terms]
+
+        max_terms = max(len(labels), len(previous_data))
+
+        while len(current_data) < max_terms:
+            current_data.append(None)
+
+        while len(previous_data) < max_terms:
+            previous_data.append(None)
+
+        while len(labels) < max_terms:
+            labels.append(f"Term {len(labels) + 1}")
+
+        return JsonResponse(
+            {
+                "mode": "class",
+                "class": {
+                    "id": selected_class.id,
+                    "name": selected_class.name,
+                    "grade_level": selected_class.grade_level,
+                },
+                "current_session": current_session.name,
+                "previous_session": (
+                    previous_session.name if previous_session else None
+                ),
+                "labels": labels,
+                "current": current_data,
+                "previous": previous_data,
+            }
+        )
+
+    # =========================================================
+    # MODE 2: OVERALL PERFORMANCE
+    # =========================================================
+
+    labels = []
+
+    current_data = []
+
+    previous_data = []
+
+    for student_class in classes:
+
+        # -----------------------------------------------------
+        # CURRENT YEAR CLASS AVERAGE
+        # -----------------------------------------------------
+
+        current_average = (
+            Grade.objects.filter(
+                session=current_session,
+                student_class=student_class,
+            )
+            .aggregate(average=Avg(total_score))
+            .get("average")
+        )
+
+        # -----------------------------------------------------
+        # PREVIOUS YEAR CLASS AVERAGE
+        # -----------------------------------------------------
+
+        previous_average = None
+
+        if previous_session:
+
+            previous_average = (
+                Grade.objects.filter(
+                    session=previous_session,
+                    student_class__grade_level=student_class.grade_level,
+                )
+                .aggregate(average=Avg(total_score))
+                .get("average")
+            )
+
+        # -----------------------------------------------------
+        # LABEL
+        # -----------------------------------------------------
+
+        labels.append(student_class.name)
+
+        # -----------------------------------------------------
+        # CURRENT
+        # -----------------------------------------------------
+
+        current_data.append(
+            round(float(current_average), 2) if current_average is not None else None
+        )
+
+        # -----------------------------------------------------
+        # PREVIOUS
+        # -----------------------------------------------------
+
+        previous_data.append(
+            round(float(previous_average), 2) if previous_average is not None else None
+        )
+
+    # ---------------------------------------------------------
+    # RESPONSE
+    # ---------------------------------------------------------
+
+    return JsonResponse(
+        {
+            "mode": "overall",
+            "current_session": current_session.name,
+            "previous_session": (previous_session.name if previous_session else None),
+            "labels": labels,
+            "current": current_data,
+            "previous": previous_data,
+        }
+    )
+
 
 # ── Admin Dashboard ──────────────────────────────────────
 @login_required
@@ -60,6 +290,20 @@ def admin_dashboard(request):
     method_labels = ['Cash', 'Bank Transfer', 'Card']
     method_data = [Payment.objects.filter(payment_method=m).count() for m in methods]
 
+    #Chart.js Data:Gender mix
+    gender_labels = ['Male', 'Female']
+    gender_data = [Student.objects.filter(gender='M', is_active=True).count(),
+                   Student.objects.filter(gender='F', is_active=True).count()]
+
+    grade_levels = (
+        StudentClass.objects
+        .values_list('grade_level', flat=True)
+        .distinct()
+        .order_by('grade_level')
+    )
+
+
+
     context = {
         'students_count': students_count,
         'teachers_count': teachers_count,
@@ -75,6 +319,10 @@ def admin_dashboard(request):
         'class_sizes': class_sizes,
         'method_labels': method_labels,
         'method_data': method_data,
+        'gender_labels': gender_labels,
+        'gender_data': gender_data,
+        'grade_levels': grade_levels,
+        'classes': classes,
     }
     return render(request, 'dashboard/admin_dashboard.html', context)
 
@@ -343,7 +591,6 @@ def teacher_dashboard(request):
         'reports_due'      : total_reports_due,
     }
     return render(request, 'dashboard/teacher_dashboard.html', context)
- 
 
 
 # ── Student Dashboard ─────────────────────────────────────

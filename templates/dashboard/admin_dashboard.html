@@ -119,14 +119,14 @@
     <div class="content-panel h-100">
       <div class="panel-header">
         <div>
-          <h2 class="panel-title">Payment Methods</h2>
-          <p class="panel-subtitle">Breakdown of fee collection channels</p>
+          <h2 class="panel-title">Gender Mix</h2>
+          <p class="panel-subtitle">Breakdown of students by gender</p>
         </div>
         <span class="panel-icon bg-tone-teal"><i class="bi bi-pie-chart"></i></span>
       </div>
       <div class="panel-body">
         <div class="chart-frame">
-          <canvas id="paymentsChart"></canvas>
+          <canvas id="genderChart"></canvas>
         </div>
       </div>
     </div>
@@ -134,35 +134,37 @@
 </div>
 
 <!-- Notices & Quick Actions -->
-<div class="row g-3">
-  <div class="col-lg-7">
+<!-- Class Performance: Year over Year -->
+<div class="row g-3 mb-4">
+  <div class="col-12">
     <div class="content-panel h-100">
       <div class="panel-header">
         <div>
-          <h2 class="panel-title">Announcements</h2>
-          <p class="panel-subtitle">Latest notices from the administration</p>
+          <h2 class="panel-title">Class Performance — Year over Year</h2>
+          <p class="panel-subtitle" id="classPerformanceSubtitle">Average score per class, previous vs current academic year</p>
         </div>
-        <a href="{% url 'dashboard:notice_list' %}" class="link-action">Manage board <i class="bi bi-arrow-right"></i></a>
+        <div class="d-flex align-items-center gap-2">
+          <select id="classSelect" class="form-select form-select-sm" style="width: auto;">
+            <option value="">Overall Performance</option>
+
+            {% for class in classes %}
+                <option value="{{ class.id }}">
+                    {{ class.name }}
+                </option>
+            {% endfor %}
+        </select>
+          <span class="panel-icon bg-tone-violet"><i class="bi bi-graph-up-arrow"></i></span>
+        </div>
       </div>
-      <div class="panel-body notice-feed">
-        {% for notice in notices %}
-        <div class="notice-item">
-          <div class="d-flex justify-content-between align-items-start gap-3">
-            <h3 class="notice-title">{{ notice.title }}</h3>
-            <span class="notice-meta text-nowrap">{{ notice.created_at|date:"M d, Y" }}</span>
-          </div>
-          <p class="notice-body">{{ notice.content|truncatewords:24 }}</p>
-          <span class="notice-meta"><i class="bi bi-person me-1"></i>{{ notice.author.get_full_name }}</span>
+      <div class="panel-body">
+        <div class="chart-frame">
+          <canvas id="classPerformanceChart"></canvas>
         </div>
-        {% empty %}
-        <div class="empty-state">
-          <i class="bi bi-megaphone"></i>
-          No active announcements.
-        </div>
-        {% endfor %}
       </div>
     </div>
   </div>
+</div>
+
 
   <div class="col-lg-5">
     <div class="content-panel h-100">
@@ -253,14 +255,14 @@ $(document).ready(function() {
     }
   });
 
-  const ctx2 = document.getElementById('paymentsChart').getContext('2d');
+  const ctx2 = document.getElementById('genderChart').getContext('2d');
   new Chart(ctx2, {
     type: 'doughnut',
     data: {
-      labels: {{ method_labels|safe }},
+      labels: {{ gender_labels|safe }},
       datasets: [{
-        data: {{ method_data|safe }},
-        backgroundColor: ['#0f766e', '#2563eb', '#6d28d9', '#b45309'],
+        data: {{ gender_data|safe }},
+        backgroundColor: ['#0f766e', '#b45309'],
         borderWidth: 0,
         hoverOffset: 6
       }]
@@ -278,6 +280,380 @@ $(document).ready(function() {
       }
     }
   });
+
+
+    // ── Class Performance: Year over Year ──
+  
+    // ── Class Performance: Year over Year ──
+
+    const CLASS_PERFORMANCE_URL =
+        "{% url 'dashboard:class_performance_data' %}";
+
+    const performanceCanvas =
+        document.getElementById('classPerformanceChart');
+
+    let performanceChart = null;
+
+
+    // ---------------------------------------------------------
+    // CREATE / UPDATE PERFORMANCE CHART
+    // ---------------------------------------------------------
+
+    function updatePerformanceChart(data) {
+
+        if (!performanceCanvas) {
+            return;
+        }
+
+        const ctx = performanceCanvas.getContext('2d');
+
+
+        // Destroy previous chart before creating a new one
+        if (performanceChart) {
+            performanceChart.destroy();
+        }
+
+
+        // -----------------------------------------------------
+        // Determine chart labels
+        // -----------------------------------------------------
+
+        const labels = data.labels || [];
+
+
+        // -----------------------------------------------------
+        // Determine chart title
+        // -----------------------------------------------------
+
+        let xAxisTitle = 'Classes';
+
+        if (data.mode === 'class') {
+            xAxisTitle = 'Terms';
+        }
+
+
+        // -----------------------------------------------------
+        // Create chart
+        // -----------------------------------------------------
+
+        performanceChart = new Chart(ctx, {
+
+            type: 'line',
+
+            data: {
+
+                labels: labels,
+
+                datasets: [
+
+                    // -----------------------------------------
+                    // PREVIOUS YEAR
+                    // -----------------------------------------
+
+                    {
+                        label:
+                            data.previous_session ||
+                            'Previous Year',
+
+                        data: data.previous || [],
+
+                        borderColor: '#94a3b8',
+
+                        backgroundColor: 'rgba(148, 163, 184, 0.10)',
+
+                        borderWidth: 2,
+
+                        pointRadius: 4,
+
+                        pointHoverRadius: 6,
+
+                        tension: 0.3,
+
+                        fill: true
+                    },
+
+
+                    // -----------------------------------------
+                    // CURRENT YEAR
+                    // -----------------------------------------
+
+                    {
+                        label:
+                            data.current_session ||
+                            'Current Year',
+
+                        data: data.current || [],
+
+                        borderColor: primary,
+
+                        backgroundColor: 'rgba(37, 99, 235, 0.10)',
+
+                        borderWidth: 3,
+
+                        pointRadius: 4,
+
+                        pointHoverRadius: 6,
+
+                        tension: 0.3,
+
+                        fill: true
+                    }
+
+                ]
+            },
+
+
+            // -------------------------------------------------
+            // CHART OPTIONS
+            // -------------------------------------------------
+
+            options: {
+
+                responsive: true,
+
+                maintainAspectRatio: false,
+
+
+                // ---------------------------------------------
+                // Plugins
+                // ---------------------------------------------
+
+                plugins: {
+
+                    legend: {
+
+                        display: true,
+
+                        position: 'bottom',
+
+                        labels: {
+
+                            boxWidth: 10,
+
+                            padding: 14,
+
+                            font: chartFont,
+
+                            color: '#526071'
+                        }
+                    },
+
+
+                    tooltip: {
+
+                        titleFont: chartFont,
+
+                        bodyFont: chartFont,
+
+                        callbacks: {
+
+                            label: function(context) {
+
+                                const value = context.parsed.y;
+
+                                if (value === null || value === undefined) {
+                                    return context.dataset.label + ': No data';
+                                }
+
+                                return (
+                                    context.dataset.label +
+                                    ': ' +
+                                    value.toFixed(2) +
+                                    '%'
+                                );
+                            }
+                        }
+                    }
+                },
+
+
+                // ---------------------------------------------
+                // Scales
+                // ---------------------------------------------
+
+                scales: {
+
+                    x: {
+
+                        title: {
+
+                            display: true,
+
+                            text: xAxisTitle,
+
+                            font: chartFont,
+
+                            color: '#526071'
+                        },
+
+                        grid: {
+
+                            display: false
+                        },
+
+                        ticks: {
+
+                            font: chartFont,
+
+                            color: '#526071'
+                        }
+                    },
+
+
+                    y: {
+
+                        beginAtZero: true,
+
+                        max: 100,
+
+                        title: {
+
+                            display: true,
+
+                            text: 'Performance (%)',
+
+                            font: chartFont,
+
+                            color: '#526071'
+                        },
+
+                        ticks: {
+
+                            font: chartFont,
+
+                            color: '#526071',
+
+                            callback: function(value) {
+
+                                return value + '%';
+                            }
+                        },
+
+                        grid: {
+
+                            color: gridColor,
+
+                            drawBorder: false
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+
+    // ---------------------------------------------------------
+    // LOAD CLASS PERFORMANCE
+    // ---------------------------------------------------------
+
+    function loadClassPerformance(classId = '') {
+
+        const params = {};
+
+        // Only send class_id when a specific class
+        // has been selected.
+
+        if (classId) {
+            params.class_id = classId;
+        }
+
+
+        $.getJSON(CLASS_PERFORMANCE_URL, params)
+
+            .done(function(data) {
+
+                // ---------------------------------------------
+                // Handle backend errors
+                // ---------------------------------------------
+
+                if (data.error) {
+
+                    console.error(
+                        'Class performance error:',
+                        data.error
+                    );
+
+                    if (performanceChart) {
+                        performanceChart.destroy();
+                        performanceChart = null;
+                    }
+
+                    return;
+                }
+
+
+                // ---------------------------------------------
+                // Update chart
+                // ---------------------------------------------
+
+                updatePerformanceChart(data);
+
+
+                // ---------------------------------------------
+                // Optional: update subtitle dynamically
+                // ---------------------------------------------
+
+                const subtitle =
+                    document.querySelector(
+                        '#classPerformanceSubtitle'
+                    );
+
+                if (subtitle) {
+
+                    if (data.mode === 'class') {
+
+                        subtitle.textContent =
+                            `${data.class.name} performance by term`;
+
+                    } else {
+
+                        subtitle.textContent =
+                            'Average performance per class, previous vs current academic year';
+                    }
+                }
+
+            })
+
+
+            .fail(function(xhr) {
+
+                console.error(
+                    'Failed to load class performance:',
+                    xhr.responseText
+                );
+
+            });
+    }
+
+
+    // ---------------------------------------------------------
+    // CLASS DROPDOWN
+    // ---------------------------------------------------------
+
+    const classSelect =
+        document.getElementById('classSelect');
+
+
+    if (classSelect) {
+
+        // Load overall performance when page loads
+
+        loadClassPerformance();
+
+
+        // Load selected class when dropdown changes
+
+        classSelect.addEventListener(
+            'change',
+            function() {
+
+                loadClassPerformance(this.value);
+
+            }
+        );
+    }
+
+
 });
 </script>
 {% endblock %}
