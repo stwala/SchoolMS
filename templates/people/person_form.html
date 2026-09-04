@@ -95,5 +95,27 @@ $(document).ready(function () {
     });
   }
 });
+
+$(document).on('click', '.password-toggle', function () {
+    const button = $(this);
+    const input = button.siblings('input');
+    const icon = button.find('i');
+
+    if (input.attr('type') === 'password') {
+        input.attr('type', 'text');
+
+        icon.removeClass('bi-eye');
+        icon.addClass('bi-eye-slash');
+
+        button.attr('title', 'Hide password');
+    } else {
+        input.attr('type', 'password');
+
+        icon.removeClass('bi-eye-slash');
+        icon.addClass('bi-eye');
+
+        button.attr('title', 'Show password');
+    }
+});
 </script>
 {% endblock %}
