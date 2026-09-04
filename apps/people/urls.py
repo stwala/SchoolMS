@@ -12,7 +12,7 @@ urlpatterns = [
     path('students/<int:pk>/edit/',         views.student_update,      name='student_update'),
     path('students/<int:pk>/delete/',       views.student_delete,      name='student_delete'),
     path('students/<int:pk>/grades.json',   views.student_grades_json, name='student_grades_json'),
-    path('students/bulk-upload/', views.student_bulk_upload, name='student_bulk_upload'),
+    path('students/bulk-upload/',           views.student_bulk_upload, name='student_bulk_upload'),
     path('students/bulk-template/', views.student_bulk_template, name='student_bulk_template'),
     # Teachers
     path('teachers/',                    views.teacher_list,   name='teacher_list'),

@@ -1,5 +1,6 @@
 from django.db.models import Sum, Count
 from apps.academics.models import Grade
+from apps.dashboard.models import ClassNamingRule
 
 
 def rank_students(student_class, session, term):
@@ -8,56 +9,40 @@ def rank_students(student_class, session, term):
 
     rankings = []
 
+    rule = ClassNamingRule.for_grade(student_class.grade_level)
+    ranking_method = rule.ranking_method if rule else 'marks'
+
     for student in students:
 
         grades = Grade.objects.filter(
-            student=student,
-            student_class=student_class,
-            session=session,
-            term=term
+            student=student, student_class=student_class, session=session, term=term
         )
 
+        if ranking_method == "marks":
 
-        if student_class.ranking_method == "marks":
-
-            total_marks = sum(
-                grade.total_score()
-                for grade in grades
-            )
-
+            total_marks = sum(grade.total_score() for grade in grades)
 
             subjects_count = grades.count()
 
+            average = total_marks / subjects_count if subjects_count else 0
 
-            average = (
-                total_marks / subjects_count
-                if subjects_count
-                else 0
+            rankings.append(
+                {
+                    "student": student,
+                    "total_marks": total_marks,
+                    "average": average,
+                    "grade": calculate_grade(average),
+                    "remark": calculate_remark(average),
+                }
             )
 
-
-            rankings.append({
-                "student": student,
-                "total_marks": total_marks,
-                "average": average,
-                "grade": calculate_grade(average),
-                "remark": calculate_remark(average),
-            })
-
-
     # highest marks first
-    rankings.sort(
-        key=lambda x: x["total_marks"],
-        reverse=True
-    )
-
+    rankings.sort(key=lambda x: x["total_marks"], reverse=True)
 
     for position, row in enumerate(rankings, start=1):
         row["position"] = position
 
-
     return rankings
-
 
 
 def calculate_grade(score):
@@ -72,7 +57,6 @@ def calculate_grade(score):
         return "D"
     else:
         return "F"
-
 
 
 def calculate_remark(score):

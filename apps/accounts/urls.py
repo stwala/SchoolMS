@@ -11,4 +11,5 @@ urlpatterns = [
     path('users/create/',   views.user_create, name='user_create'),
     path('users/<int:pk>/edit/',   views.user_update, name='user_update'),
     path('users/<int:pk>/delete/', views.user_delete, name='user_delete'),
+    path('force-password-change/', views.ForcePasswordChangeView.as_view(), name='force_password_change'),
 ]

@@ -256,18 +256,18 @@ $(document).ready(function() {
   });
 
   const ctx2 = document.getElementById('genderChart').getContext('2d');
-  new Chart(ctx2, {
-    type: 'doughnut',
-    data: {
-      labels: {{ gender_labels|safe }},
+    new Chart(ctx2, {
+      type: 'doughnut',
+      data: {
+        labels: {{ gender_labels| safe }},
       datasets: [{
-        data: {{ gender_data|safe }},
-        backgroundColor: ['#0f766e', '#b45309'],
-        borderWidth: 0,
-        hoverOffset: 6
+        data: {{ gender_data| safe }},
+      backgroundColor: ['#0f766e', '#b45309'],
+      borderWidth: 0,
+      hoverOffset: 6
       }]
     },
-    options: {
+      options: {
       responsive: true,
       maintainAspectRatio: false,
       cutout: '62%',
@@ -283,14 +283,12 @@ $(document).ready(function() {
 
 
     // ── Class Performance: Year over Year ──
-  
+
     // ── Class Performance: Year over Year ──
-
     const CLASS_PERFORMANCE_URL =
-        "{% url 'dashboard:class_performance_data' %}";
-
+      "{% url 'dashboard:class_performance_data' %}";
     const performanceCanvas =
-        document.getElementById('classPerformanceChart');
+      document.getElementById('classPerformanceChart');
 
     let performanceChart = null;
 
@@ -298,249 +296,247 @@ $(document).ready(function() {
     // ---------------------------------------------------------
     // CREATE / UPDATE PERFORMANCE CHART
     // ---------------------------------------------------------
-
     function updatePerformanceChart(data) {
+      if (!performanceCanvas) {
+        return;
+      }
 
-        if (!performanceCanvas) {
-            return;
-        }
-
-        const ctx = performanceCanvas.getContext('2d');
-
-
-        // Destroy previous chart before creating a new one
-        if (performanceChart) {
-            performanceChart.destroy();
-        }
+      const ctx = performanceCanvas.getContext('2d');
 
 
-        // -----------------------------------------------------
-        // Determine chart labels
-        // -----------------------------------------------------
-
-        const labels = data.labels || [];
-
-
-        // -----------------------------------------------------
-        // Determine chart title
-        // -----------------------------------------------------
-
-        let xAxisTitle = 'Classes';
-
-        if (data.mode === 'class') {
-            xAxisTitle = 'Terms';
-        }
+      // Destroy previous chart before creating a new one
+      if (performanceChart) {
+        performanceChart.destroy();
+      }
 
 
-        // -----------------------------------------------------
-        // Create chart
-        // -----------------------------------------------------
+      // -----------------------------------------------------
+      // Determine chart labels
+      // -----------------------------------------------------
 
-        performanceChart = new Chart(ctx, {
-
-            type: 'line',
-
-            data: {
-
-                labels: labels,
-
-                datasets: [
-
-                    // -----------------------------------------
-                    // PREVIOUS YEAR
-                    // -----------------------------------------
-
-                    {
-                        label:
-                            data.previous_session ||
-                            'Previous Year',
-
-                        data: data.previous || [],
-
-                        borderColor: '#94a3b8',
-
-                        backgroundColor: 'rgba(148, 163, 184, 0.10)',
-
-                        borderWidth: 2,
-
-                        pointRadius: 4,
-
-                        pointHoverRadius: 6,
-
-                        tension: 0.3,
-
-                        fill: true
-                    },
+      const labels = data.labels || [];
 
 
-                    // -----------------------------------------
-                    // CURRENT YEAR
-                    // -----------------------------------------
+      // -----------------------------------------------------
+      // Determine chart title
+      // -----------------------------------------------------
 
-                    {
-                        label:
-                            data.current_session ||
-                            'Current Year',
+      let xAxisTitle = 'Classes';
 
-                        data: data.current || [],
+      if (data.mode === 'class') {
+        xAxisTitle = 'Terms';
+      }
 
-                        borderColor: primary,
 
-                        backgroundColor: 'rgba(37, 99, 235, 0.10)',
+      // -----------------------------------------------------
+      // Create chart
+      // -----------------------------------------------------
 
-                        borderWidth: 3,
+      performanceChart = new Chart(ctx, {
 
-                        pointRadius: 4,
+        type: 'line',
 
-                        pointHoverRadius: 6,
+        data: {
 
-                        tension: 0.3,
+          labels: labels,
 
-                        fill: true
-                    }
+          datasets: [
 
-                ]
+            // -----------------------------------------
+            // PREVIOUS YEAR
+            // -----------------------------------------
+
+            {
+              label:
+                data.previous_session ||
+                'Previous Year',
+
+              data: data.previous || [],
+
+              borderColor: '#94a3b8',
+
+              backgroundColor: 'rgba(148, 163, 184, 0.10)',
+
+              borderWidth: 2,
+
+              pointRadius: 4,
+
+              pointHoverRadius: 6,
+
+              tension: 0.3,
+
+              fill: true
             },
 
 
-            // -------------------------------------------------
-            // CHART OPTIONS
-            // -------------------------------------------------
+            // -----------------------------------------
+            // CURRENT YEAR
+            // -----------------------------------------
 
-            options: {
+            {
+              label:
+                data.current_session ||
+                'Current Year',
 
-                responsive: true,
+              data: data.current || [],
 
-                maintainAspectRatio: false,
+              borderColor: primary,
 
+              backgroundColor: 'rgba(37, 99, 235, 0.10)',
 
-                // ---------------------------------------------
-                // Plugins
-                // ---------------------------------------------
+              borderWidth: 3,
 
-                plugins: {
+              pointRadius: 4,
 
-                    legend: {
+              pointHoverRadius: 6,
 
-                        display: true,
+              tension: 0.3,
 
-                        position: 'bottom',
-
-                        labels: {
-
-                            boxWidth: 10,
-
-                            padding: 14,
-
-                            font: chartFont,
-
-                            color: '#526071'
-                        }
-                    },
-
-
-                    tooltip: {
-
-                        titleFont: chartFont,
-
-                        bodyFont: chartFont,
-
-                        callbacks: {
-
-                            label: function(context) {
-
-                                const value = context.parsed.y;
-
-                                if (value === null || value === undefined) {
-                                    return context.dataset.label + ': No data';
-                                }
-
-                                return (
-                                    context.dataset.label +
-                                    ': ' +
-                                    value.toFixed(2) +
-                                    '%'
-                                );
-                            }
-                        }
-                    }
-                },
-
-
-                // ---------------------------------------------
-                // Scales
-                // ---------------------------------------------
-
-                scales: {
-
-                    x: {
-
-                        title: {
-
-                            display: true,
-
-                            text: xAxisTitle,
-
-                            font: chartFont,
-
-                            color: '#526071'
-                        },
-
-                        grid: {
-
-                            display: false
-                        },
-
-                        ticks: {
-
-                            font: chartFont,
-
-                            color: '#526071'
-                        }
-                    },
-
-
-                    y: {
-
-                        beginAtZero: true,
-
-                        max: 100,
-
-                        title: {
-
-                            display: true,
-
-                            text: 'Performance (%)',
-
-                            font: chartFont,
-
-                            color: '#526071'
-                        },
-
-                        ticks: {
-
-                            font: chartFont,
-
-                            color: '#526071',
-
-                            callback: function(value) {
-
-                                return value + '%';
-                            }
-                        },
-
-                        grid: {
-
-                            color: gridColor,
-
-                            drawBorder: false
-                        }
-                    }
-                }
+              fill: true
             }
-        });
-    }
 
+          ]
+        },
+
+
+        // -------------------------------------------------
+        // CHART OPTIONS
+        // -------------------------------------------------
+
+        options: {
+
+          responsive: true,
+
+          maintainAspectRatio: false,
+
+
+          // ---------------------------------------------
+          // Plugins
+          // ---------------------------------------------
+
+          plugins: {
+
+            legend: {
+
+              display: true,
+
+              position: 'bottom',
+
+              labels: {
+
+                boxWidth: 10,
+
+                padding: 14,
+
+                font: chartFont,
+
+                color: '#526071'
+              }
+            },
+
+
+            tooltip: {
+
+              titleFont: chartFont,
+
+              bodyFont: chartFont,
+
+              callbacks: {
+
+                label: function (context) {
+
+                  const value = context.parsed.y;
+
+                  if (value === null || value === undefined) {
+                    return context.dataset.label + ': No data';
+                  }
+
+                  return (
+                    context.dataset.label +
+                    ': ' +
+                    value.toFixed(2) +
+                    '%'
+                  );
+                }
+              }
+            }
+          },
+
+
+          // ---------------------------------------------
+          // Scales
+          // ---------------------------------------------
+
+          scales: {
+
+            x: {
+
+              title: {
+
+                display: true,
+
+                text: xAxisTitle,
+
+                font: chartFont,
+
+                color: '#526071'
+              },
+
+              grid: {
+
+                display: false
+              },
+
+              ticks: {
+
+                font: chartFont,
+
+                color: '#526071'
+              }
+            },
+
+
+            y: {
+
+              beginAtZero: true,
+
+              max: 100,
+
+              title: {
+
+                display: true,
+
+                text: 'Performance (%)',
+
+                font: chartFont,
+
+                color: '#526071'
+              },
+
+              ticks: {
+
+                font: chartFont,
+
+                color: '#526071',
+
+                callback: function (value) {
+
+                  return value + '%';
+                }
+              },
+
+              grid: {
+
+                color: gridColor,
+
+                drawBorder: false
+              }
+            }
+          }
+        }
+      });
+    }
+  
 
     // ---------------------------------------------------------
     // LOAD CLASS PERFORMANCE
@@ -561,6 +557,7 @@ $(document).ready(function() {
         $.getJSON(CLASS_PERFORMANCE_URL, params)
 
             .done(function(data) {
+
 
                 // ---------------------------------------------
                 // Handle backend errors
@@ -585,9 +582,7 @@ $(document).ready(function() {
                 // ---------------------------------------------
                 // Update chart
                 // ---------------------------------------------
-
                 updatePerformanceChart(data);
-
 
                 // ---------------------------------------------
                 // Optional: update subtitle dynamically

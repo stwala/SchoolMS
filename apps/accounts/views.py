@@ -10,6 +10,21 @@ from django.http import QueryDict
 from .forms import LoginForm, UserCreateForm, UserUpdateForm
 from .models import User
 from .decorators import admin_required
+from django.contrib.auth.views import PasswordChangeView
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.urls import reverse_lazy
+from django.contrib import messages
+
+class ForcePasswordChangeView(LoginRequiredMixin, PasswordChangeView):
+    template_name = 'accounts/force_password_change.html'
+    success_url = reverse_lazy('dashboard')  # wherever you send users after login
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        self.request.user.must_change_password = False
+        self.request.user.save(update_fields=['must_change_password'])
+        messages.success(self.request, 'Password updated.')
+        return response
 
 def _is_safe_redirect_url(url, user):
     """

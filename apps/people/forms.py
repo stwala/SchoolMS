@@ -1,5 +1,5 @@
 from datetime import date
-
+from django import forms
 from django import forms
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Submit, Row, Column
@@ -75,6 +75,10 @@ import csv
 import io
 from openpyxl import load_workbook
 
+from django.contrib.auth.hashers import make_password
+
+PARENT_DEFAULT_PASSWORD_HASH = make_password('Parent123')  
+
 class StudentBulkUploadForm(forms.Form):
     file = forms.FileField(
         label='CSV or Excel file',
@@ -133,97 +137,145 @@ class StudentBulkUploadForm(forms.Form):
 
         from apps.academics.models import StudentClass
 
-        # ── Prefetch everything once, instead of querying per row ──
         existing_usernames = set(User.objects.values_list('username', flat=True))
         existing_admission_nos = set(Student.objects.values_list('admission_no', flat=True))
         class_lookup = {c.name.lower(): c for c in StudentClass.objects.all()}
 
         results = []
+        pending = []
 
-        # ── One transaction for the whole batch — huge win on SQLite,
-        #    which otherwise fsyncs on every individual save(). ──
-        with transaction.atomic():
-            for i, row in enumerate(rows, start=2):
+        for i, row in enumerate(rows, start=2):
+            try:
+                first_name   = str(row.get('first_name') or '').strip()
+                last_name    = str(row.get('last_name') or '').strip()
+                username     = str(row.get('username') or '').strip()
+                admission_no = str(row.get('admission_no') or '').strip()
+                raw_dob = str(row.get('date_of_birth') or '').strip()
                 try:
-                    first_name   = str(row.get('first_name') or '').strip()
-                    last_name    = str(row.get('last_name') or '').strip()
-                    username     = str(row.get('username') or '').strip()
-                    admission_no = str(row.get('admission_no') or '').strip()
-                    raw_dob = str(row.get('date_of_birth') or '').strip()
-                    try:
-                        dob = self._parse_date(raw_dob)
-                    except ValueError as e:
-                        results.append({'row': i, 'status': 'error', 'msg': str(e)})
-                        continue
-                    gender       = str(row.get('gender') or '').strip().upper()
-                    password     = str(row.get('password') or 'changeme123').strip()
-                    blood_group  = str(row.get('blood_group') or '').strip() or None
-                    address      = str(row.get('address') or '').strip()
-                    class_name   = str(row.get('class') or '').strip()
-
-                    if not all([first_name, last_name, username, admission_no, dob, gender]):
-                        results.append({'row': i, 'status': 'error',
-                                        'msg': 'Missing required field(s).'})
-                        continue
-
-                    if gender not in ('M', 'F'):
-                        results.append({'row': i, 'status': 'error',
-                                        'msg': f'Invalid gender "{gender}". Use M or F.'})
-                        continue
-
-                    if username in existing_usernames:
-                        results.append({'row': i, 'status': 'skip',
-                                        'msg': f'Username "{username}" already exists.'})
-                        continue
-
-                    if admission_no in existing_admission_nos:
-                        results.append({'row': i, 'status': 'skip',
-                                        'msg': f'Admission no "{admission_no}" already exists.'})
-                        continue
-
-                    student_class = None
-                    if class_name:
-                        student_class = class_lookup.get(class_name.lower())
-                        if not student_class:
-                            results.append({'row': i, 'status': 'error',
-                                            'msg': f'Class "{class_name}" not found.'})
-                            continue
-
-                    u = User(role='student', first_name=first_name,
-                            last_name=last_name, username=username)
-                    u.set_password(password)
-                    u.save()
-
-                    Student.objects.create(
-                        user=u,
-                        admission_no=admission_no,
-                        date_of_birth=dob,
-                        gender=gender,
-                        blood_group=blood_group,
-                        address=address,
-                        student_class=student_class,
-                    )
-                    results.append({'row': i, 'status': 'ok',
-                                    'msg': f'{first_name} {last_name} created.'})
-
-                    # Track newly created ones so duplicate rows within
-                    # the same file are also caught
-                    existing_usernames.add(username)
-                    existing_admission_nos.add(admission_no)
-
-                except Exception as e:
+                    dob = self._parse_date(raw_dob)
+                except ValueError as e:
                     results.append({'row': i, 'status': 'error', 'msg': str(e)})
+                    continue
+                gender       = str(row.get('gender') or '').strip().upper()
+                blood_group  = str(row.get('blood_group') or '').strip() or None
+                address      = str(row.get('address') or '').strip()
+                class_name   = str(row.get('class') or '').strip()
+
+                if not all([first_name, last_name, username, admission_no, dob, gender]):
+                    results.append({'row': i, 'status': 'error', 'msg': 'Missing required field(s).'})
+                    continue
+                if gender not in ('M', 'F'):
+                    results.append({'row': i, 'status': 'error', 'msg': f'Invalid gender "{gender}". Use M or F.'})
+                    continue
+                if username in existing_usernames:
+                    results.append({'row': i, 'status': 'skip', 'msg': f'Username "{username}" already exists.'})
+                    continue
+                if admission_no in existing_admission_nos:
+                    results.append({'row': i, 'status': 'skip', 'msg': f'Admission no "{admission_no}" already exists.'})
+                    continue
+
+                student_class = None
+                if class_name:
+                    student_class = class_lookup.get(class_name.lower())
+                    if not student_class:
+                        results.append({'row': i, 'status': 'error', 'msg': f'Class "{class_name}" not found.'})
+                        continue
+
+                pending.append({
+                    'row': i, 'first_name': first_name, 'last_name': last_name,
+                    'username': username, 'admission_no': admission_no, 'dob': dob,
+                    'gender': gender, 'blood_group': blood_group, 'address': address,
+                    'student_class': student_class,
+                    'parent': {
+                        'first_name': str(row.get('parent_first_name') or '').strip(),
+                        'last_name': str(row.get('parent_last_name') or '').strip(),
+                        'username': str(row.get('parent_username') or '').strip(),
+                        'email': str(row.get('parent_email') or '').strip(),
+                        'relation': str(row.get('parent_relation') or '').strip().lower(),
+                        'occupation': str(row.get('parent_occupation') or '').strip(),
+                    },
+                })
+                existing_usernames.add(username)
+                existing_admission_nos.add(admission_no)
+
+            except Exception as e:
+                results.append({'row': i, 'status': 'error', 'msg': str(e)})
+
+        if not pending:
+            return results
+
+        with transaction.atomic():
+            # Students: real User row for FK integrity, but NO usable password —
+            # set_unusable_password() just writes a marker, no hashing cost at all.
+            student_users = []
+            for p in pending:
+                u = User(role='student', first_name=p['first_name'],
+                          last_name=p['last_name'], username=p['username'])
+                u.set_unusable_password()
+                student_users.append(u)
+            created_users = User.objects.bulk_create(student_users)
+
+            student_objs = [
+                Student(user=u, admission_no=p['admission_no'], date_of_birth=p['dob'],
+                        gender=p['gender'], blood_group=p['blood_group'],
+                        address=p['address'], student_class=p['student_class'])
+                for u, p in zip(created_users, pending)
+            ]
+            created_students = Student.objects.bulk_create(student_objs)
+
+            for p in pending:
+                results.append({'row': p['row'], 'status': 'ok',
+                                 'msg': f"{p['first_name']} {p['last_name']} created."})
+
+            # Parents: real login, fixed password hash, must_change_password=True
+            parent_cache = {}
+            for student_obj, p in zip(created_students, pending):
+                pdata = p['parent']
+                pu = pdata['username']
+                if not pu:
+                    continue
+
+                if pu not in parent_cache:
+                    parent_user = User.objects.filter(username=pu).first()
+                    if parent_user:
+                        parent, _ = Parent.objects.get_or_create(
+                            user=parent_user,
+                            defaults={'relation': pdata['relation'], 'occupation': pdata['occupation']},
+                        )
+                    else:
+                        parent_user = User(
+                            role='parent', first_name=pdata['first_name'],
+                            last_name=pdata['last_name'], username=pu, email=pdata['email'],
+                            password=PARENT_DEFAULT_PASSWORD_HASH,
+                            must_change_password=True,
+                        )
+                        parent_user.save()
+                        parent = Parent.objects.create(
+                            user=parent_user, relation=pdata['relation'], occupation=pdata['occupation'],
+                        )
+                    parent_cache[pu] = parent
+
+                parent_cache[pu].students.add(student_obj)
 
         return results
+
+class PasswordToggleWidget(forms.PasswordInput):
+    template_name = 'widgets/password_toggle.html'
 
 class TeacherForm(forms.ModelForm):
     first_name    = forms.CharField(max_length=150)
     last_name     = forms.CharField(max_length=150)
     username      = forms.CharField(max_length=150)
     email         = forms.EmailField(required=False)
-    password1     = forms.CharField(label='Password', widget=forms.PasswordInput, required=False,
+    password1     = forms.CharField(label='Password', widget=PasswordToggleWidget(attrs={
+            'class': 'form-control',
+            'autocomplete': 'new-password',
+        }), required=False,
                                     help_text='Leave blank when editing.')
-    password2     = forms.CharField(label='Confirm password', widget=forms.PasswordInput, required=False)
+    password2     = forms.CharField(label='Confirm password', widget=PasswordToggleWidget(attrs={
+            'class': 'form-control',
+            'autocomplete': 'new-password',
+        }), required=False)
 
     class Meta:
         model  = Teacher
